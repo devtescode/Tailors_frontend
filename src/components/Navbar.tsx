@@ -114,7 +114,7 @@ export default function Navbar() {
               animate={{ y: 0, opacity: 1, scale: 1 }}
               exit={{ y: -10, opacity: 0, scale: 0.95 }}
               transition={{ type: "spring", stiffness: 140, damping: 18 }}
-              className="absolute top-full right-6 w-[220px] bg-background border border-border shadow-xl rounded-2xl overflow-hidden"
+              className="absolute top-full right-6 w-[270px] bg-background border border-border shadow-xl rounded-2xl overflow-hidden"
             >
               <div className="px-4 py-4 flex flex-col gap-2">
 
