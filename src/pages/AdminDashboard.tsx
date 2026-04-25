@@ -469,7 +469,7 @@ export default function AdminDashboard() {
                           value={product.description}
                           onChange={(e) => updateProductForm(product.id, 'description', e.target.value)}
                           placeholder="Product description..."
-                          rows={2}
+                          rows={6}
                           className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-gold focus:border-transparent outline-none transition text-sm resize-none"
                         />
                       </div>
