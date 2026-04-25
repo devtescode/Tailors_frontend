@@ -100,13 +100,13 @@ export default function Navbar() {
         {mobileOpen && (
           <>
             {/* Backdrop */}
-            <motion.div
+            {/* <motion.div
               initial={{ y: -20, opacity: 0, scale: 0.95 }}
               animate={{ y: 0, opacity: 1, scale: 1 }}
               exit={{ y: -10, opacity: 0, scale: 0.95 }}
               transition={{ type: "spring", stiffness: 140, damping: 18 }}
               className="absolute top-full right-6 z-50 w-[220px] bg-background/95 backdrop-blur-xl shadow-xl rounded-2xl overflow-hidden"
-            />
+            /> */}
 
             {/* Panel */}
             <motion.div
