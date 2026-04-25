@@ -30,8 +30,8 @@ export default function Navbar() {
       animate={{ y: 0 }}
       transition={{ type: "spring", stiffness: 120, damping: 18 }}
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
-          ? "bg-background/90 backdrop-blur-xl shadow-md border-b border-border"
-          : "bg-transparent"
+        ? "bg-background/90 backdrop-blur-xl shadow-md border-b border-border"
+        : "bg-transparent"
         }`}
     >
       <div className="container mx-auto px-6 py-4 flex items-center justify-between">
@@ -101,11 +101,11 @@ export default function Navbar() {
           <>
             {/* Backdrop */}
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setMobileOpen(false)}
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+              initial={{ y: -20, opacity: 0, scale: 0.95 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: -10, opacity: 0, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 140, damping: 18 }}
+              className="absolute top-full right-6 z-50 w-[220px] bg-background/95 backdrop-blur-xl shadow-xl rounded-2xl overflow-hidden"
             />
 
             {/* Panel */}
