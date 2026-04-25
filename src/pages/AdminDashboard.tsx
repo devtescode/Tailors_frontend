@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Product } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, LogOut, X, Menu, ChevronDown } from "lucide-react";
- import Swal from "sweetalert2";
+import { Plus, Pencil, Trash2, LogOut, X, Menu, ChevronDown, Upload, Image, Check, PlusCircle } from "lucide-react";
+import Swal from "sweetalert2";
 
 
 export default function AdminDashboard() {
@@ -22,19 +22,23 @@ export default function AdminDashboard() {
   //   imageURL: "",
   //   category: "",
   // });
-  const [form, setForm] = useState<{
-  name: string;
-  price: string;
-  description: string;
-  category: string;
-  imageURL: File | string | null;
-}>({
-  name: "",
-  price: "",
-  description: "",
-  category: "",
-  imageURL: null,
-});
+  const [productsToAdd, setProductsToAdd] = useState<{
+    id: string;
+    name: string;
+    price: string;
+    description: string;
+    category: string;
+    imageURL: File | string | null;
+    imagePreview: string | null;
+  }[]>([{
+    id: crypto.randomUUID(),
+    name: "",
+    price: "",
+    description: "",
+    category: "",
+    imageURL: null,
+    imagePreview: null,
+  }]);
 
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -82,78 +86,118 @@ export default function AdminDashboard() {
   }, []);
 
   const resetForm = () => {
-    setForm({
+    setProductsToAdd([{
+      id: crypto.randomUUID(),
       name: "",
       price: "",
       description: "",
-      imageURL: "",
       category: "",
-    });
+      imageURL: null,
+      imagePreview: null,
+    }]);
     setEditingProduct(null);
     setShowForm(false);
   };
 
-  // ✅ FIXED SUBMIT (CLOUDINARY READY BACKEND COMPATIBLE)
+  // Add another product form
+  const addAnotherProduct = () => {
+    setProductsToAdd([...productsToAdd, {
+      id: crypto.randomUUID(),
+      name: "",
+      price: "",
+      description: "",
+      category: "",
+      imageURL: null,
+      imagePreview: null,
+    }]);
+  };
+
+  // Remove a product form
+  const removeProductForm = (id: string) => {
+    if (productsToAdd.length > 1) {
+      setProductsToAdd(productsToAdd.filter(p => p.id !== id));
+    }
+  };
+
+  // Update a specific product form
+  const updateProductForm = (id: string, field: string, value: any) => {
+    setProductsToAdd(productsToAdd.map(p => {
+      if (p.id === id) {
+        const updated = { ...p, [field]: value };
+        if (field === 'imageURL' && value instanceof File) {
+          updated.imagePreview = URL.createObjectURL(value);
+        }
+        return updated;
+      }
+      return p;
+    }));
+  };
+
+  // ✅ SUBMIT MULTIPLE PRODUCTS
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const formData = new FormData();
+      // Filter out products that have at least a name
+      const validProducts = productsToAdd.filter(p => p.name.trim() !== "");
+      
+      for (const product of validProducts) {
+        const formData = new FormData();
 
-      formData.append("name", form.name);
-      formData.append("price", Number(form.price).toString());
-      formData.append("description", form.description);
-      formData.append("category", form.category);
+        formData.append("name", product.name);
+        formData.append("price", Number(product.price).toString());
+        formData.append("description", product.description);
+        formData.append("category", product.category);
 
-      // ONLY append file if real file exists
-      if (form.imageURL instanceof File) {
-        formData.append("image", form.imageURL);
+        // ONLY append file if real file exists
+        if (product.imageURL instanceof File) {
+          formData.append("image", product.imageURL);
+        }
+
+        const url = editingProduct
+          ? `http://localhost:4000/products/editproducts/${editingProduct._id}`
+          : `http://localhost:4000/products/addproducts`;
+
+        const method = editingProduct ? "PUT" : "POST";
+
+        const res = await fetch(url, {
+          method,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          toast({
+            title: "Error",
+            description: data.message || "Failed to add product",
+            variant: "destructive",
+          });
+          return;
+        }
       }
 
-      const url = editingProduct
-        ? `http://localhost:4000/products/editproducts/${editingProduct._id}`
-        : `http://localhost:4000/products/addproducts`;
-
-      const method = editingProduct ? "PUT" : "POST";
-
-      const res = await fetch(url, {
-        method,
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
+      toast({
+        title: editingProduct ? "Product updated successfully" : `${validProducts.length} product(s) added successfully`,
       });
 
-      const data = await res.json();
+      const refreshed = await fetch(
+        "http://localhost:4000/products/getallproducts",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-      if (res.ok) {
-        toast({
-          title: editingProduct
-            ? "Product updated successfully"
-            : "Product added successfully",
-        });
+      const newData = await refreshed.json();
+      setProducts(Array.isArray(newData) ? newData : []);
 
-        const refreshed = await fetch(
-          "http://localhost:4000/products/getallproducts",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        const newData = await refreshed.json();
-        setProducts(Array.isArray(newData) ? newData : []);
-
-        resetForm();
-      } else {
-        toast({
-          title: "Error",
-          description: data.message,
-          variant: "destructive",
-        });
-      }
+      resetForm();
     } catch (err: any) {
       console.error("SUBMIT ERROR:", err);
 
@@ -167,63 +211,63 @@ export default function AdminDashboard() {
     }
   };
   
-  // ✅ FIXED EDIT (_id FIX)
+  // ✅ EDIT PRODUCT
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
-    setForm({
+    setProductsToAdd([{
+      id: crypto.randomUUID(),
       name: product.name,
       price: product.price.toString(),
       description: product.description,
       imageURL: product.imageURL,
       category: product.category || "",
-    });
+      imagePreview: product.imageURL as string,
+    }]);
     setShowForm(true);
   };
 
-  // ✅ FIXED DELETE (_id FIX)
- 
+  // ✅ DELETE PRODUCT
+  const handleDelete = async (id: string) => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, delete it!",
+    });
 
-const handleDelete = async (id: string) => {
-  const result = await Swal.fire({
-    title: "Are you sure?",
-    text: "You won't be able to revert this!",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#3085d6",
-    cancelButtonColor: "#d33",
-    confirmButtonText: "Yes, delete it!",
-  });
+    if (!result.isConfirmed) return;
 
-  if (!result.isConfirmed) return;
+    const res = await fetch(
+      `http://localhost:4000/products/deleteproducts/${id}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
-  const res = await fetch(
-    `http://localhost:4000/products/deleteproducts/${id}`,
-    {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+    if (res.ok) {
+      setProducts((prev) => prev.filter((p: any) => p._id !== id));
+
+      await Swal.fire({
+        title: "Deleted!",
+        text: "Your product has been deleted.",
+        icon: "success",
+      });
+
+      toast({ title: "Product deleted" });
+    } else {
+      Swal.fire({
+        title: "Error",
+        text: "Failed to delete product",
+        icon: "error",
+      });
     }
-  );
-
-  if (res.ok) {
-    setProducts((prev) => prev.filter((p: any) => p._id !== id));
-
-    await Swal.fire({
-      title: "Deleted!",
-      text: "Your product has been deleted.",
-      icon: "success",
-    });
-
-    toast({ title: "Product deleted" });
-  } else {
-    Swal.fire({
-      title: "Error",
-      text: "Failed to delete product",
-      icon: "error",
-    });
-  }
-};
+  };
 
   const handleLogout = () => {
     sessionStorage.removeItem("token");
@@ -341,116 +385,179 @@ const handleDelete = async (id: string) => {
         </div>
 
         {showForm && (
-          <div className="fixed inset-0 bg-foreground/50 z-50 flex items-center justify-center p-6">
-            <div className="bg-card rounded-xl p-8 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl">
-
+          <div className="fixed inset-0 bg-foreground/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-card rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+              
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-display text-xl font-bold text-foreground">
-                  {editingProduct ? "Edit Product" : "Add Product"}
+                  {editingProduct ? "Edit Product" : "Add Products"}
                 </h3>
 
                 <button
                   onClick={resetForm}
-                  className="text-muted-foreground hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground p-2 rounded-lg hover:bg-secondary transition-colors"
                 >
                   <X size={20} />
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Multiple Product Forms */}
+                {productsToAdd.map((product, index) => (
+                  <div key={product.id} className="relative bg-secondary/30 rounded-xl p-5 border border-border">
+                    {/* Product Number Badge */}
+                    <div className="absolute -top-3 left-4 bg-foreground text-background px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                      <Check size={12} />
+                      Product {index + 1}
+                    </div>
 
-                {/* NAME */}
-                <input
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="Product name"
-                  className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-gold outline-none"
-                />
+                    {/* Remove Button (only if more than 1 product) */}
+                    {productsToAdd.length > 1 && !editingProduct && (
+                      <button
+                        type="button"
+                        onClick={() => removeProductForm(product.id)}
+                        className="absolute top-3 right-3 text-muted-foreground hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
 
-                {/* PRICE */}
-                <input
-                  type="number"
-                  value={form.price}
-                  onChange={(e) => setForm({ ...form, price: e.target.value })}
-                  placeholder="Price"
-                  className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-gold outline-none"
-                />
+                    <div className="grid gap-4 mt-2">
+                      {/* NAME */}
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Product Name</label>
+                        <input
+                          value={product.name}
+                          onChange={(e) => updateProductForm(product.id, 'name', e.target.value)}
+                          placeholder="Enter product name"
+                          className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-gold focus:border-transparent outline-none transition text-sm"
+                        />
+                      </div>
 
-                <select
-                  value={form.category}
-                  onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-gold outline-none"
-                >
-                  <option value="">Select Category</option>
-                  <option value="Men">Men</option>
-                  <option value="Women">Women</option>
-                </select>
+                      <div className="grid grid-cols-2 gap-4">
+                        {/* PRICE */}
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Price (₦)</label>
+                          <input
+                            type="number"
+                            value={product.price}
+                            onChange={(e) => updateProductForm(product.id, 'price', e.target.value)}
+                            placeholder="0.00"
+                            className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-gold focus:border-transparent outline-none transition text-sm"
+                          />
+                        </div>
 
-                {/* DESCRIPTION */}
-                <textarea
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  placeholder="Description"
-                  rows={3}
-                  className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-gold outline-none resize-none"
-                />
+                        {/* CATEGORY */}
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Category</label>
+                          <select
+                            value={product.category}
+                            onChange={(e) => updateProductForm(product.id, 'category', e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-gold focus:border-transparent outline-none transition text-sm"
+                          >
+                            <option value="">Select</option>
+                            <option value="Men">Men</option>
+                            <option value="Women">Women</option>
+                          </select>
+                        </div>
+                      </div>
 
-                {/* FILE UPLOAD */}
-                {editingProduct?.imageURL ? (
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Current Image</p>
+                      {/* DESCRIPTION */}
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Description</label>
+                        <textarea
+                          value={product.description}
+                          onChange={(e) => updateProductForm(product.id, 'description', e.target.value)}
+                          placeholder="Product description..."
+                          rows={2}
+                          className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-gold focus:border-transparent outline-none transition text-sm resize-none"
+                        />
+                      </div>
 
-                    <div className="flex items-center gap-4">
-                      <img
-                        src={editingProduct.imageURL}
-                        alt="product"
-                        className="w-20 h-20 rounded-lg object-cover border border-border"
-                      />
-
-                      <p className="text-xs text-muted-foreground">
-                        You can replace this image below
-                      </p>
+                      {/* FILE UPLOAD - NEW STYLING */}
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Product Image</label>
+                        
+                        {/* Show preview if image selected */}
+                        {(product.imagePreview || (editingProduct && typeof product.imageURL === 'string')) ? (
+                          <div className="relative">
+                            <div className="flex items-center gap-4 p-3 bg-secondary/50 rounded-lg border border-border">
+                              <div className="w-16 h-16 rounded-lg overflow-hidden bg-background flex-shrink-0">
+                                <img 
+                                  src={product.imagePreview || product.imageURL} 
+                                  alt="Preview" 
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-foreground truncate">
+                                  {product.imageURL instanceof File ? product.imageURL.name : 'Current image'}
+                                </p>
+                                <p className="text-xs text-muted-foreground">Click to change</p>
+                              </div>
+                              <label className="cursor-pointer p-2 rounded-lg bg-foreground text-background hover:opacity-90 transition-opacity">
+                                <Upload size={16} />
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => updateProductForm(product.id, 'imageURL', e.target.files?.[0])}
+                                  className="hidden"
+                                />
+                              </label>
+                            </div>
+                          </div>
+                        ) : (
+                          /* Upload Area */
+                          <label className="flex flex-col items-center justify-center w-full h-28 rounded-xl border-2 border-dashed border-border hover:border-gold hover:bg-secondary/20 transition-all cursor-pointer group">
+                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                              <div className="w-10 h-10 rounded-full bg-secondary group-hover:bg-gold/20 flex items-center justify-center mb-2 transition-colors">
+                                <Image className="w-5 h-5 text-muted-foreground group-hover:text-gold transition-colors" />
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                <span className="font-semibold text-gold">Click to upload</span> or drag
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">PNG, JPG up to 5MB</p>
+                            </div>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => updateProductForm(product.id, 'imageURL', e.target.files?.[0])}
+                              className="hidden"
+                            />
+                          </label>
+                        )}
+                      </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="text-sm text-muted-foreground mb-2">
-                    ➕ Add product image
-                  </div>
+                ))}
+
+                {/* Add Another Product Button */}
+                {!editingProduct && (
+                  <button
+                    type="button"
+                    onClick={addAnotherProduct}
+                    className="w-full py-3 rounded-xl border-2 border-dashed border-border hover:border-gold hover:bg-secondary/20 transition-all flex items-center justify-center gap-2 text-muted-foreground hover:text-foreground"
+                  >
+                    <PlusCircle size={18} />
+                    Add Another Product
+                  </button>
                 )}
 
-                {/* YOUR INPUT (UNCHANGED) */}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      imageURL: e.target.files?.[0] as any,
-                    })
-                  }
-                  className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-foreground file:text-background hover:file:opacity-90"
-                />
                 {/* SUBMIT BUTTON */}
-                {/* <button
-                  type="submit"
-                  className="w-full py-3 rounded-full bg-foreground text-background font-semibold hover:opacity-90 transition-opacity"
-                >
-                  {editingProduct ? "Update Product" : "Add Product"}
-                </button> */}
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 rounded-full bg-foreground text-background font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
+                  className="w-full py-3.5 rounded-full bg-foreground text-background font-semibold hover:opacity-90 transition-all disabled:opacity-60 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                 >
                   {loading ? (
                     <div className="flex items-center justify-center gap-2">
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Processing...</span>
+                      <span>Adding Products...</span>
                     </div>
                   ) : editingProduct ? (
                     "Update Product"
                   ) : (
-                    "Add Product"
+                    `Add ${productsToAdd.filter(p => p.name.trim()).length || 1} Product(s)`
                   )}
                 </button>
 
