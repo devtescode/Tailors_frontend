@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Product } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, LogOut, X } from "lucide-react";
+import { Plus, Pencil, Trash2, LogOut, X, Menu, ChevronDown } from "lucide-react";
  import Swal from "sweetalert2";
 
 
@@ -11,6 +11,9 @@ export default function AdminDashboard() {
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(false);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   // const [form, setForm] = useState({
   //   name: "",
@@ -58,11 +61,25 @@ export default function AdminDashboard() {
         setProducts(Array.isArray(data) ? data : []);
       } catch (err) {
         console.log(err);
+      } finally {
+        setProductsLoading(false);
       }
     };
 
     fetchProducts();
   }, [navigate]);
+
+  // Close mobile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const resetForm = () => {
     setForm({
@@ -225,7 +242,8 @@ const handleDelete = async (id: string) => {
             </h1>
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* Desktop Menu - Hidden on small screens */}
+          <div className="hidden md:flex items-center gap-3">
             <a href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               View Site
             </a>
@@ -244,6 +262,61 @@ const handleDelete = async (id: string) => {
               <LogOut size={16} />
               Logout
             </button>
+          </div>
+
+          {/* Mobile Menu Button - Visible only on small screens */}
+          <div className="md:hidden relative" ref={menuRef}>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-foreground text-background text-sm font-medium hover:opacity-90 transition-all shadow-lg hover:shadow-xl"
+            >
+              <Menu size={18} />
+              Menu
+              <ChevronDown 
+                size={16} 
+                className={`transition-transform duration-200 ${mobileMenuOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+
+            {/* Mobile Dropdown */}
+            {mobileMenuOpen && (
+              <div className="absolute right-0 mt-3 w-56 bg-card rounded-xl shadow-2xl border border-border overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="py-2">
+                  <a
+                    href="/"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-secondary transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    View Site
+                  </a>
+                  
+                  <a
+                    href="/admin/change-password"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-secondary transition-colors"
+                  >
+                    <span className="text-base">🔒</span>
+                    Change Password
+                  </a>
+
+                  <div className="border-t border-border my-1"></div>
+
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="flex items-center gap-3 px-4 py-3 w-full text-sm text-red-500 hover:bg-red-50 transition-colors"
+                  >
+                    <LogOut size={16} />
+                    Logout
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -388,7 +461,45 @@ const handleDelete = async (id: string) => {
         <div className="bg-card rounded-xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
 
-            <table className="w-full">
+            {/* Loading State */}
+            {productsLoading && (
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="relative">
+                  <div className="w-16 h-16 border-4 border-gold/20 rounded-full"></div>
+                  <div className="absolute top-0 left-0 w-16 h-16 border-4 border-gold border-t-transparent rounded-full animate-spin"></div>
+                </div>
+                <p className="mt-4 text-muted-foreground font-medium">Loading products...</p>
+              </div>
+            )}
+
+            {/* Empty State */}
+            {!productsLoading && products.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="w-24 h-24 bg-secondary rounded-full flex items-center justify-center mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-foreground mb-2">No Products Yet</h3>
+                <p className="text-muted-foreground mb-6 text-center max-w-md">
+                  You haven't added any products to your inventory yet. Click the button below to add your first product.
+                </p>
+                <button
+                  onClick={() => {
+                    resetForm();
+                    setShowForm(true);
+                  }}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity"
+                >
+                  <Plus size={18} />
+                  Add Your First Product
+                </button>
+              </div>
+            )}
+
+            {/* Products Table */}
+            {!productsLoading && products.length > 0 && (
+              <table className="w-full">
 
               <thead>
                 <tr className="border-b border-border">
@@ -468,7 +579,7 @@ const handleDelete = async (id: string) => {
               </tbody>
 
             </table>
-
+            )}
           </div>
         </div>
 

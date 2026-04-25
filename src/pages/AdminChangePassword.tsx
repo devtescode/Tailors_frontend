@@ -22,30 +22,62 @@ export default function AdminChangePassword() {
   }
 }, [navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPassword.length < 6) {
-      toast({ title: "New password must be at least 6 characters", variant: "destructive" });
-      return;
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  if (newPassword.length < 6) {
+    toast({ title: "New password must be at least 6 characters", variant: "destructive" });
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    toast({ title: "New passwords do not match", variant: "destructive" });
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const token = sessionStorage.getItem("token");
+
+    const res = await fetch("http://localhost:4000/admin/changepassword", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        currentPassword,
+        newPassword,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      toast({ title: "Password changed successfully! 🔒" });
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } else {
+      toast({
+        title: "Error",
+        description: data.message,
+        variant: "destructive",
+      });
     }
-    if (newPassword !== confirmPassword) {
-      toast({ title: "New passwords do not match", variant: "destructive" });
-      return;
-    }
-    setLoading(true);
-    setTimeout(() => {
-      const success = changeAdminPassword(currentPassword, newPassword);
-      if (success) {
-        toast({ title: "Password changed successfully! 🔒" });
-        setCurrentPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
-      } else {
-        toast({ title: "Current password is incorrect", variant: "destructive" });
-      }
-      setLoading(false);
-    }, 500);
-  };
+  } catch (err) {
+    console.log(err);
+    toast({
+      title: "Network error",
+      description: "Something went wrong",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
