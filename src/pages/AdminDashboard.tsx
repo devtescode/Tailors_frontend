@@ -141,7 +141,7 @@ export default function AdminDashboard() {
     try {
       // Filter out products that have at least a name
       const validProducts = productsToAdd.filter(p => p.name.trim() !== "");
-      
+
       for (const product of validProducts) {
         const formData = new FormData();
 
@@ -210,7 +210,7 @@ export default function AdminDashboard() {
       setLoading(false);
     }
   };
-  
+
   // ✅ EDIT PRODUCT
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
@@ -316,8 +316,8 @@ export default function AdminDashboard() {
             >
               <Menu size={18} />
               Menu
-              <ChevronDown 
-                size={16} 
+              <ChevronDown
+                size={16}
                 className={`transition-transform duration-200 ${mobileMenuOpen ? 'rotate-180' : ''}`}
               />
             </button>
@@ -336,7 +336,7 @@ export default function AdminDashboard() {
                     </svg>
                     View Site
                   </a>
-                  
+
                   <a
                     href="/admin/change-password"
                     onClick={() => setMobileMenuOpen(false)}
@@ -385,10 +385,10 @@ export default function AdminDashboard() {
         </div>
 
         {showForm && (
-          <div className="fixed inset-0 bg-foreground/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-card rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
-              
-              <div className="flex items-center justify-between mb-6">
+          <div className="fixed inset-0 bg-foreground/90 z-50 flex items-center justify-center p-4">
+            <div className="bg-card rounded-xl p-0 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+
+              <div className="sticky top-0 z-20 bg-card border-b border-border px-4 py-4 flex items-center justify-between">
                 <h3 className="font-display text-xl font-bold text-foreground">
                   {editingProduct ? "Edit Product" : "Add Products"}
                 </h3>
@@ -401,7 +401,7 @@ export default function AdminDashboard() {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6 px-6 py-6">
                 {/* Multiple Product Forms */}
                 {productsToAdd.map((product, index) => (
                   <div key={product.id} className="relative bg-secondary/30 rounded-xl p-5 border border-border">
@@ -477,15 +477,15 @@ export default function AdminDashboard() {
                       {/* FILE UPLOAD - NEW STYLING */}
                       <div>
                         <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Product Image</label>
-                        
+
                         {/* Show preview if image selected */}
                         {(product.imagePreview || (editingProduct && typeof product.imageURL === 'string')) ? (
                           <div className="relative">
                             <div className="flex items-center gap-4 p-3 bg-secondary/50 rounded-lg border border-border">
                               <div className="w-16 h-16 rounded-lg overflow-hidden bg-background flex-shrink-0">
-                                <img 
-                                  src={product.imagePreview || product.imageURL} 
-                                  alt="Preview" 
+                                <img
+                                  src={product.imagePreview || product.imageURL}
+                                  alt="Preview"
                                   className="w-full h-full object-cover"
                                 />
                               </div>
@@ -608,84 +608,84 @@ export default function AdminDashboard() {
             {!productsLoading && products.length > 0 && (
               <table className="w-full">
 
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Image</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Name</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Category</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Price</th>
-                  <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">Actions</th>
-                </tr>
-              </thead>
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Image</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Name</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Category</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Price</th>
+                    <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">Actions</th>
+                  </tr>
+                </thead>
 
-              <tbody>
-                {products.map((product: any) => (
-                  <tr
-                    key={product._id}
-                    className="border-b border-border last:border-0 hover:bg-secondary/50 transition"
-                  >
+                <tbody>
+                  {products.map((product: any) => (
+                    <tr
+                      key={product._id}
+                      className="border-b border-border last:border-0 hover:bg-secondary/50 transition"
+                    >
 
-                    {/* IMAGE */}
-                    <td className="px-6 py-4">
-                      <img
-                        src={product.imageURL}
-                        alt={product.name}
-                        className="w-14 h-14 rounded-lg object-cover"
-                      />
-                    </td>
+                      {/* IMAGE */}
+                      <td className="px-6 py-4">
+                        <img
+                          src={product.imageURL}
+                          alt={product.name}
+                          className="w-14 h-14 rounded-lg object-cover"
+                        />
+                      </td>
 
-                    {/* NAME */}
-                    <td className="px-6 py-4 font-medium text-foreground">
-                      {product.name}
-                    </td>
+                      {/* NAME */}
+                      <td className="px-6 py-4 font-medium text-foreground">
+                        {product.name}
+                      </td>
 
-                    {/* CATEGORY */}
-                    {/* <td className="px-6 py-4 text-muted-foreground text-sm">
+                      {/* CATEGORY */}
+                      {/* <td className="px-6 py-4 text-muted-foreground text-sm">
                         {product.category || "—"}
                       </td> */}
-                    <td className="px-6 py-4 text-muted-foreground text-sm">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${product.category === "Men"
-                          ? "bg-blue-100 text-blue-700"
-                          : product.category === "Women"
-                            ? "bg-pink-100 text-pink-700"
-                            : "bg-gray-100 text-gray-600"
-                          }`}
-                      >
-                        {product.category || "—"}
-                      </span>
-                    </td>
-                    {/* PRICE */}
-                    <td className="px-6 py-4 font-semibold text-gold">
-                      ₦{product.price.toLocaleString()}
-                    </td>
-
-                    {/* ACTIONS */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-3">
-
-                        <button
-                          onClick={() => handleEdit(product)}
-                          className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground"
+                      <td className="px-6 py-4 text-muted-foreground text-sm">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${product.category === "Men"
+                            ? "bg-blue-100 text-blue-700"
+                            : product.category === "Women"
+                              ? "bg-pink-100 text-pink-700"
+                              : "bg-gray-100 text-gray-600"
+                            }`}
                         >
-                          <Pencil size={16} />
-                        </button>
+                          {product.category || "—"}
+                        </span>
+                      </td>
+                      {/* PRICE */}
+                      <td className="px-6 py-4 font-semibold text-gold">
+                        ₦{product.price.toLocaleString()}
+                      </td>
 
-                        <button
-                          onClick={() => handleDelete(product._id)}
-                          className="p-2 rounded-lg hover:bg-red-100 text-muted-foreground hover:text-red-500"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                      {/* ACTIONS */}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-3">
 
-                      </div>
-                    </td>
+                          <button
+                            onClick={() => handleEdit(product)}
+                            className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground"
+                          >
+                            <Pencil size={16} />
+                          </button>
 
-                  </tr>
-                ))}
-              </tbody>
+                          <button
+                            onClick={() => handleDelete(product._id)}
+                            className="p-2 rounded-lg hover:bg-red-100 text-muted-foreground hover:text-red-500"
+                          >
+                            <Trash2 size={16} />
+                          </button>
 
-            </table>
+                        </div>
+                      </td>
+
+                    </tr>
+                  ))}
+                </tbody>
+
+              </table>
             )}
           </div>
         </div>
