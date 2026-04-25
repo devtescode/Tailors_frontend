@@ -40,7 +40,7 @@ export default function AdminChangePassword() {
   try {
     const token = sessionStorage.getItem("token");
 
-    const res = await fetch("http://localhost:4000/admin/changepassword", {
+    const res = await fetch("https://tailors-backend.onrender.com/admin/changepassword", {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",

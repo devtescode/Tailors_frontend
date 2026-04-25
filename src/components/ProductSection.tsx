@@ -22,15 +22,15 @@ export default function ProductSection() {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-
-        const res = await fetch("http://localhost:4000/products/getallproducts");
+        // http://localhost:4000
+        const res = await fetch("https://tailors-backend.onrender.com/products/getallproducts");
         const data = await res.json();
 
         const formatted = Array.isArray(data)
           ? data.map((p: any) => ({
-              ...p,
-              id: p._id, // FIX: MongoDB compatibility
-            }))
+            ...p,
+            id: p._id, // FIX: MongoDB compatibility
+          }))
           : [];
 
         setProducts(formatted);
@@ -80,11 +80,10 @@ export default function ProductSection() {
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
-              className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${
-                activeCategory === cat
+              className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${activeCategory === cat
                   ? "bg-foreground text-background shadow-lg"
                   : "bg-card text-muted-foreground hover:bg-card/80 border border-border"
-              }`}
+                }`}
             >
               {cat}
             </button>
@@ -152,7 +151,7 @@ export default function ProductSection() {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-foreground text-background text-sm font-semibold hover:bg-gold hover:text-accent-foreground transition-all duration-300 shadow-sm hover:shadow-md"
-                      // bg-[#25D366]
+                    // bg-[#25D366]
                     >
                       <MessageCircle size={16} />
                       Order

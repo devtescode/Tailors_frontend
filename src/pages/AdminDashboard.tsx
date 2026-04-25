@@ -54,7 +54,7 @@ export default function AdminDashboard() {
 
     const fetchProducts = async () => {
       try {
-        const res = await fetch("http://localhost:4000/products/getallproducts", {
+        const res = await fetch("https://tailors-backend.onrender.com/products/getallproducts", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -156,8 +156,8 @@ export default function AdminDashboard() {
         }
 
         const url = editingProduct
-          ? `http://localhost:4000/products/editproducts/${editingProduct._id}`
-          : `http://localhost:4000/products/addproducts`;
+          ? `https://tailors-backend.onrender.com/products/editproducts/${editingProduct._id}`
+          : `https://tailors-backend.onrender.com/products/addproducts`;
 
         const method = editingProduct ? "PUT" : "POST";
 
@@ -186,7 +186,7 @@ export default function AdminDashboard() {
       });
 
       const refreshed = await fetch(
-        "http://localhost:4000/products/getallproducts",
+        "https://tailors-backend.onrender.com/products/getallproducts",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -241,7 +241,7 @@ export default function AdminDashboard() {
     if (!result.isConfirmed) return;
 
     const res = await fetch(
-      `http://localhost:4000/products/deleteproducts/${id}`,
+      `https://tailors-backend.onrender.com/products/deleteproducts/${id}`,
       {
         method: "DELETE",
         headers: {

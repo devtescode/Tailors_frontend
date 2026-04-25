@@ -17,7 +17,7 @@ export default function AdminLogin() {
   useEffect(() => {
     const checkAdmin = async () => {
       try {
-        const res = await fetch("http://localhost:4000/admin/status");
+        const res = await fetch("https://tailors-backend.onrender.com/admin/status");
         const data = await res.json();
         setAdminExists(data.adminExists);
       } catch (error) {
@@ -37,7 +37,7 @@ export default function AdminLogin() {
     try {
       if (!adminExists) {
         // 🔥 REGISTER ADMIN
-        const res = await fetch("http://localhost:4000/admin/register", {
+        const res = await fetch("https://tailors-backend.onrender.com/admin/register", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -65,7 +65,7 @@ export default function AdminLogin() {
         }
       } else {
         // 🔥 LOGIN ADMIN
-        const res = await fetch("http://localhost:4000/admin/login", {
+        const res = await fetch("https://tailors-backend.onrender.com/admin/login", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
