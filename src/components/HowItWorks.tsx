@@ -38,7 +38,7 @@ const steps = [
 
 export default function HowItWorks() {
   return (
-    <section className="py-28 bg-secondary relative overflow-hidden">
+    <section aria-labelledby="process-heading" className="py-28 bg-secondary relative overflow-hidden">
       <div className="absolute top-1/2 right-0 w-80 h-80 bg-gold/5 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2" />
 
       <div className="container mx-auto px-6 relative z-10">
@@ -48,10 +48,10 @@ export default function HowItWorks() {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <span className="inline-block px-4 py-1.5 rounded-full bg-gold/10 text-gold text-xs uppercase tracking-[0.25em] mb-4 font-body font-medium">
+          <span className="inline-block px-4 py-1.5 rounded-full bg-gold/10 text-gold-ink text-xs uppercase tracking-[0.25em] mb-4 font-body font-medium">
             🔄 Process
           </span>
-          <h2 className="font-display text-4xl md:text-6xl font-bold text-foreground">
+          <h2 id="process-heading" className="font-display text-4xl md:text-6xl font-bold text-foreground">
             How It <span className="italic text-gradient-gold">Works</span>
           </h2>
           <p className="text-muted-foreground mt-4 max-w-xl mx-auto text-lg">
@@ -62,7 +62,7 @@ export default function HowItWorks() {
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
           {steps.map((s, i) => (
             <motion.div
-              key={i}
+              key={s.step}
               initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -79,11 +79,11 @@ export default function HowItWorks() {
                   Step {s.step}
                 </div>
                 <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${s.color} flex items-center justify-center mx-auto mb-5 mt-2 group-hover:scale-110 transition-transform duration-300`}>
-                  <s.icon className="text-gold" size={28} />
+                  <s.icon className="text-gold" size={28} aria-hidden="true" />
                 </div>
                 <h3 className="font-display font-bold text-foreground text-lg mb-3">{s.title}</h3>
                 <p className="text-muted-foreground text-sm leading-relaxed">{s.description}</p>
-                <div className="text-3xl mt-4 opacity-30 group-hover:opacity-60 transition-opacity">{s.emoji}</div>
+                <div aria-hidden="true" className="text-3xl mt-4 opacity-30 group-hover:opacity-60 transition-opacity">{s.emoji}</div>
               </div>
             </motion.div>
           ))}

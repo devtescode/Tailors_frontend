@@ -6,7 +6,7 @@ const features = [
   {
     icon: Scissors,
     title: "Master Craftsmanship",
-    description: "Over 15 years of experience in bespoke tailoring with meticulous attention to every detail.",
+    description: "Over 5 years of experience in bespoke tailoring with meticulous attention to every detail.",
   },
   {
     icon: Ruler,
@@ -27,7 +27,7 @@ const features = [
 
 export default function AboutSection() {
   return (
-    <section id="about" className="py-28 relative overflow-hidden">
+    <section id="about" aria-labelledby="about-heading" className="py-28 relative overflow-hidden">
       <div className="absolute top-1/2 left-0 w-80 h-80 bg-gold/5 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/2" />
 
       <div className="container mx-auto px-6 relative z-10">
@@ -38,10 +38,10 @@ export default function AboutSection() {
             viewport={{ once: true }}
             transition={{ duration: 0.7 }}
           >
-            <span className="inline-block px-4 py-1.5 rounded-full bg-gold/10 text-gold text-xs uppercase tracking-[0.25em] mb-4 font-body font-medium">
-              ✂️ About Us
+            <span className="inline-block px-4 py-1.5 rounded-full bg-gold/10 text-gold-ink text-xs uppercase tracking-[0.25em] mb-4 font-body font-medium">
+              <span aria-hidden="true">✂️</span> About Us
             </span>
-            <h2 className="font-display text-4xl md:text-6xl font-bold text-foreground mb-6 leading-tight">
+            <h2 id="about-heading" className="font-display text-4xl md:text-6xl font-bold text-foreground mb-6 leading-tight">
               Where Tradition Meets{" "}
               <span className="italic text-gradient-gold">Elegance</span>
             </h2>
@@ -61,7 +61,7 @@ export default function AboutSection() {
                   transition={{ delay: i * 0.1 }}
                   className="flex gap-4 p-4 rounded-xl bg-secondary/50 hover:bg-secondary transition-colors duration-300"
                 >
-                  <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gold/10 flex items-center justify-center">
+                  <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gold/10 flex items-center justify-center" aria-hidden="true">
                     <feature.icon className="text-gold" size={22} />
                   </div>
                   <div>
@@ -96,9 +96,9 @@ export default function AboutSection() {
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ delay: 0.4 }}
-              className="absolute -bottom-8 -left-8 bg-card p-1 px-3 py-0 rounded-md shadow-2xl"
+              className="absolute -bottom-4 -left-4 sm:-bottom-8 sm:-left-8 bg-card px-4 py-3 rounded-md shadow-2xl"
             >
-              <p className="font-display text-4xl font-bold text-gold">15+</p>
+              <p className="font-display text-4xl font-bold text-gold">5+</p>
               <p className="text-muted-foreground text-sm mt-1">Years of Excellence</p>
             </motion.div>
             {/* <motion.div

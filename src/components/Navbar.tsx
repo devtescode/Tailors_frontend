@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 
@@ -10,22 +11,57 @@ const navItems = [
 ];
 
 export default function Navbar() {
-  const [scrolled, setScrolled] = useState(false);
+  const [scrolled, setScrolled] = useState(() => window.scrollY > 50);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener("scroll", onScroll);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // prevent background scroll when menu is open
+  // prevent background scroll when menu is open, restoring the previous value on close
   useEffect(() => {
-    document.body.style.overflow = mobileOpen ? "hidden" : "auto";
+    if (!mobileOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileOpen]);
+
+  // close the mobile menu on Escape or on interaction outside the nav/panel
+  useEffect(() => {
+    if (!mobileOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMobileOpen(false);
+        toggleRef.current?.focus();
+      }
+    };
+
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (navRef.current && target && !navRef.current.contains(target)) {
+        setMobileOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
   }, [mobileOpen]);
 
   return (
     <motion.nav
+      ref={navRef}
       initial={{ y: -80 }}
       animate={{ y: 0 }}
       transition={{ type: "spring", stiffness: 120, damping: 18 }}
@@ -56,17 +92,22 @@ export default function Navbar() {
             </a>
           ))}
 
-          <a
-            href="/admin"
+          <Link
+            to="/admin"
             className="text-sm font-medium px-5 py-2 rounded-full bg-foreground text-background hover:scale-105 transition-transform"
           >
             Admin
-          </a>
+          </Link>
         </div>
 
         {/* MOBILE BUTTON (UPDATED) */}
         <button
+          ref={toggleRef}
+          type="button"
           onClick={() => setMobileOpen(!mobileOpen)}
+          aria-label={mobileOpen ? "Close menu" : "Open menu"}
+          aria-expanded={mobileOpen}
+          aria-controls="mobile-menu"
           className="md:hidden w-9 h-9 flex items-center justify-center rounded-xl bg-card border border-border shadow-sm hover:scale-105 active:scale-95 transition-all duration-200"
         >
           <AnimatePresence mode="wait">
@@ -78,7 +119,7 @@ export default function Navbar() {
                 exit={{ rotate: 90, opacity: 0, scale: 0.8 }}
                 transition={{ duration: 0.2 }}
               >
-                <X size={18} />
+                <X size={18} aria-hidden="true" />
               </motion.div>
             ) : (
               <motion.div
@@ -88,7 +129,7 @@ export default function Navbar() {
                 exit={{ rotate: -90, opacity: 0, scale: 0.8 }}
                 transition={{ duration: 0.2 }}
               >
-                <Menu size={18} />
+                <Menu size={18} aria-hidden="true" />
               </motion.div>
             )}
           </AnimatePresence>
@@ -110,6 +151,7 @@ export default function Navbar() {
 
             {/* Panel */}
             <motion.div
+              id="mobile-menu"
               initial={{ y: -20, opacity: 0, scale: 0.95 }}
               animate={{ y: 0, opacity: 1, scale: 1 }}
               exit={{ y: -10, opacity: 0, scale: 0.95 }}
@@ -129,13 +171,13 @@ export default function Navbar() {
                   </a>
                 ))}
 
-                <a
-                  href="/admin"
+                <Link
+                  to="/admin"
                   onClick={() => setMobileOpen(false)}
                   className="mt-2 text-center text-sm px-4 py-2 rounded-full bg-foreground text-background font-medium active:scale-95 transition"
                 >
                   Admin Panel
-                </a>
+                </Link>
 
               </div>
             </motion.div>

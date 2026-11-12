@@ -1,5 +1,4 @@
 import { motion } from "framer-motion";
-import { ArrowDown, Sparkles } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
 
 export default function HeroSection() {
@@ -7,13 +6,22 @@ export default function HeroSection() {
     <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background with parallax feel */}
       <div className="absolute inset-0">
-        <img src={heroBg} alt="Tailor atelier" className="w-full h-full object-cover scale-110" width={1920} height={1080} />
-        <div className="absolute inset-0 bg-gradient-to-b from-foreground/70 via-foreground/50 to-foreground/80" />
+        <img
+          src={heroBg}
+          alt="Bespoke tailor at work in a heritage atelier"
+          className="w-full h-full object-cover scale-110"
+          width={1920}
+          height={1080}
+          loading="eager"
+          fetchPriority="high"
+          decoding="async"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-foreground/70 via-foreground/60 to-foreground/80" />
       </div>
 
       {/* Decorative elements */}
-      <div className="absolute top-20 left-10 w-72 h-72 bg-gold/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-gold/5 rounded-full blur-3xl" />
+      <div aria-hidden="true" className="absolute top-20 left-10 w-72 h-72 bg-gold/10 rounded-full blur-3xl" />
+      <div aria-hidden="true" className="absolute bottom-20 right-10 w-96 h-96 bg-gold/5 rounded-full blur-3xl" />
 
       {/* Content */}
       <div className="relative z-10 text-center px-6 max-w-4xl mx-auto">
@@ -81,23 +89,23 @@ export default function HeroSection() {
         </motion.div>
 
         {/* Stats */}
-        <motion.div
+        <motion.dl
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.2 }}
           className="mt-16 flex justify-center gap-12 md:gap-20"
         >
           {[
-            { value: "500+", label: "Happy Clients" },
-            { value: "15+", label: "Years Experience" },
-            { value: "1000+", label: "Designs Created" },
+            { value: "200+", label: "Happy Clients" },
+            { value: "5+", label: "Years Experience" },
+            { value: "500+", label: "Designs Created" },
           ].map((stat) => (
-            <div key={stat.label} className="text-center">
-              <p className="font-display text-2xl md:text-3xl font-bold text-gold">{stat.value}</p>
-              <p className="text-primary-foreground/50 text-xs md:text-sm mt-1">{stat.label}</p>
+            <div key={stat.label} className="text-center flex flex-col-reverse">
+              <dt className="text-primary-foreground/50 text-xs md:text-sm mt-1">{stat.label}</dt>
+              <dd className="font-display text-2xl md:text-3xl font-bold text-gold">{stat.value}</dd>
             </div>
           ))}
-        </motion.div>
+        </motion.dl>
       </div>
 
       {/* Scroll indicator */}

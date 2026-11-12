@@ -48,7 +48,7 @@ const testimonials = [
 
 export default function TestimonialsSection() {
   return (
-    <section className="py-28 bg-secondary relative overflow-hidden">
+    <section aria-labelledby="testimonials-heading" className="py-28 bg-secondary relative overflow-hidden">
       <div className="absolute top-0 left-1/2 w-96 h-96 bg-gold/5 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
 
       <div className="container mx-auto px-6 relative z-10">
@@ -58,10 +58,10 @@ export default function TestimonialsSection() {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <span className="inline-block px-4 py-1.5 rounded-full bg-gold/10 text-gold text-xs uppercase tracking-[0.25em] mb-4 font-body font-medium">
+          <span className="inline-block px-4 py-1.5 rounded-full bg-gold/10 text-gold-ink text-xs uppercase tracking-[0.25em] mb-4 font-body font-medium">
             ⭐ Client Stories
           </span>
-          <h2 className="font-display text-4xl md:text-6xl font-bold text-foreground">
+          <h2 id="testimonials-heading" className="font-display text-4xl md:text-6xl font-bold text-foreground">
             Trusted by <span className="italic text-gradient-gold">Hundreds</span>
           </h2>
           <p className="text-muted-foreground mt-4 max-w-lg mx-auto">
@@ -72,14 +72,14 @@ export default function TestimonialsSection() {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {testimonials.map((t, i) => (
             <motion.div
-              key={i}
+              key={t.name}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.08 }}
               className="bg-card rounded-2xl p-7 border border-border/50 hover:border-gold/20 hover:shadow-xl transition-all duration-500 group relative"
             >
-              <Quote className="text-gold/20 mb-4 group-hover:text-gold/40 transition-colors" size={32} />
+              <Quote aria-hidden="true" className="text-gold/20 mb-4 group-hover:text-gold/40 transition-colors" size={32} />
               <p className="text-muted-foreground leading-relaxed mb-6 text-sm">
                 "{t.text}"
               </p>
@@ -92,8 +92,9 @@ export default function TestimonialsSection() {
                   <p className="text-muted-foreground text-xs">{t.role}</p>
                 </div>
                 <div className="flex gap-0.5">
+                  <span className="sr-only">Rated {t.rating} out of 5</span>
                   {Array.from({ length: t.rating }).map((_, si) => (
-                    <Star key={si} className="text-gold fill-gold" size={14} />
+                    <Star key={si} aria-hidden="true" className="text-gold fill-gold" size={14} />
                   ))}
                 </div>
               </div>

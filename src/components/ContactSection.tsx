@@ -1,10 +1,16 @@
 import { motion } from "framer-motion";
-import { Phone, MapPin, Clock, MessageCircle, Mail } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { WHATSAPP_NUMBER } from "@/lib/store";
 import { FaPhoneAlt, FaEnvelope, FaMapMarkerAlt, FaClock } from "react-icons/fa";
 
+type ContactItem = {
+  icon: typeof FaPhoneAlt;
+  label: string;
+  value: string;
+  href?: string;
+};
 
-const contactInfo = [
+const contactInfo: ContactItem[] = [
   {
     icon: FaPhoneAlt,
     label: "Call Us",
@@ -21,13 +27,14 @@ const contactInfo = [
     icon: FaMapMarkerAlt,
     label: "Visit Our Studio",
     value: "12 Bode Thomas St, Surulere, Lagos",
-    href: "https://maps.google.com",
+    href:
+      "https://www.google.com/maps/search/?api=1&query=" +
+      encodeURIComponent("12 Bode Thomas St, Surulere, Lagos"),
   },
   {
     icon: FaClock,
     label: "Working Hours",
     value: "Mon – Sat, 9:00 AM – 6:00 PM",
-    href: "#",
   },
 ];
 
@@ -43,7 +50,7 @@ export default function ContactSection() {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <span className="inline-block px-4 py-1.5 rounded-full bg-gold/10 text-gold text-xs uppercase tracking-[0.25em] mb-4 font-body font-medium">
+          <span className="inline-block px-4 py-1.5 rounded-full bg-gold/10 text-gold-ink text-xs uppercase tracking-[0.25em] mb-4 font-body font-medium">
             📬 Get in Touch
           </span>
           <h2 className="font-display text-4xl md:text-6xl font-bold text-foreground">
@@ -55,23 +62,42 @@ export default function ContactSection() {
         </motion.div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto mb-14">
-          {contactInfo.map((item, i) => (
-            <motion.a
-              key={i}
-              href={item.href}
-              target={item.href.startsWith("http") ? "_blank" : undefined}
-              rel={item.href.startsWith("http") ? "noopener noreferrer" : undefined}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              className="bg-card rounded-2xl p-6 text-center hover:shadow-xl hover:border-gold/20 transition-all duration-500 border border-border/50 group"
-            >
-              <div className="flex justify-center items-center text-3xl mb-3">{item.icon && <item.icon />}</div>
-              <h3 className="font-display font-semibold text-foreground mb-1 text-sm">{item.label}</h3>
-              <p className="text-muted-foreground text-xs leading-relaxed">{item.value}</p>
-            </motion.a>
-          ))}
+          {contactInfo.map(({ href, icon: Icon, label, value }, i) => {
+            const cardProps = {
+              initial: { opacity: 0, y: 20 },
+              whileInView: { opacity: 1, y: 0 },
+              viewport: { once: true },
+              transition: { delay: i * 0.1 },
+              className:
+                "bg-card rounded-2xl p-6 text-center hover:shadow-xl hover:border-gold/20 transition-all duration-500 border border-border/50 group",
+            };
+
+            const content = (
+              <>
+                <div className="flex justify-center items-center text-3xl mb-3">
+                  <Icon aria-hidden="true" />
+                </div>
+                <h3 className="font-display font-semibold text-foreground mb-1 text-sm">{label}</h3>
+                <p className="text-muted-foreground text-xs leading-relaxed">{value}</p>
+              </>
+            );
+
+            return href ? (
+              <motion.a
+                key={label}
+                {...cardProps}
+                href={href}
+                target={href.startsWith("http") ? "_blank" : undefined}
+                rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
+              >
+                {content}
+              </motion.a>
+            ) : (
+              <motion.div key={label} {...cardProps}>
+                {content}
+              </motion.div>
+            );
+          })}
         </div>
 
         {/* WhatsApp CTA */}

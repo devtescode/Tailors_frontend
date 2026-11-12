@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { Lock } from "lucide-react";
+import { Eye, EyeOff, Lock } from "lucide-react";
 
 export default function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [adminExists, setAdminExists] = useState(true);
   const [checking, setChecking] = useState(true);
@@ -15,6 +16,10 @@ export default function AdminLogin() {
 
   // 🔹 CHECK IF ADMIN EXISTS
   useEffect(() => {
+    if (sessionStorage.getItem("token")) {
+      navigate("/admin/dashboard");
+    }
+
     const checkAdmin = async () => {
       try {
         const res = await fetch("https://tailors-backend.onrender.com/admin/status");
@@ -28,7 +33,7 @@ export default function AdminLogin() {
     };
 
     checkAdmin();
-  }, []);
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,7 +112,9 @@ export default function AdminLogin() {
   if (checking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground">Loading...</p>
+        <p role="status" aria-live="polite" className="text-muted-foreground">
+          Loading...
+        </p>
       </div>
     );
   }
@@ -136,13 +143,18 @@ export default function AdminLogin() {
           className="bg-card rounded-xl p-8 shadow-sm space-y-5"
         >
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
+            <label
+              htmlFor="admin-email"
+              className="block text-sm font-medium text-foreground mb-2"
+            >
               Email
             </label>
             <input
+              id="admin-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
               required
               className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-gold focus:border-transparent outline-none transition"
               placeholder="admin@tailor.com"
@@ -150,23 +162,40 @@ export default function AdminLogin() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
+            <label
+              htmlFor="admin-password"
+              className="block text-sm font-medium text-foreground mb-2"
+            >
               Password
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-gold focus:border-transparent outline-none transition"
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <input
+                id="admin-password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete={adminExists ? "current-password" : "new-password"}
+                required
+                className="w-full px-4 py-3 pr-12 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-gold focus:border-transparent outline-none transition"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-pressed={showPassword}
+                className="absolute inset-y-0 right-0 flex items-center px-4 rounded-r-lg text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-inset transition-colors"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-full bg-foreground text-background font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+            aria-busy={loading}
+            className="w-full py-3 rounded-full bg-foreground text-background font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2"
           >
             {loading
               ? "Processing..."
@@ -183,12 +212,12 @@ export default function AdminLogin() {
         </form>
 
         <div className="text-center mt-6">
-          <a
-            href="/"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          <Link
+            to="/"
+            className="inline-block text-sm text-muted-foreground hover:text-foreground transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2"
           >
             ← Back to website
-          </a>
+          </Link>
         </div>
       </div>
     </div>

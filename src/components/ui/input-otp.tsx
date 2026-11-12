@@ -26,7 +26,10 @@ const InputOTPSlot = React.forwardRef<
   React.ComponentPropsWithoutRef<"div"> & { index: number }
 >(({ index, className, ...props }, ref) => {
   const inputOTPContext = React.useContext(OTPInputContext);
-  const { char, hasFakeCaret, isActive } = inputOTPContext.slots[index];
+  const slot = inputOTPContext.slots[index];
+  const char = slot?.char ?? null;
+  const hasFakeCaret = slot?.hasFakeCaret ?? false;
+  const isActive = slot?.isActive ?? false;
 
   return (
     <div
@@ -40,8 +43,8 @@ const InputOTPSlot = React.forwardRef<
     >
       {char}
       {hasFakeCaret && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="animate-caret-blink h-4 w-px bg-foreground duration-1000" />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div aria-hidden="true" className="animate-caret-blink h-4 w-px bg-foreground duration-1000" />
         </div>
       )}
     </div>
@@ -52,7 +55,7 @@ InputOTPSlot.displayName = "InputOTPSlot";
 const InputOTPSeparator = React.forwardRef<React.ElementRef<"div">, React.ComponentPropsWithoutRef<"div">>(
   ({ ...props }, ref) => (
     <div ref={ref} role="separator" {...props}>
-      <Dot />
+      <Dot aria-hidden="true" />
     </div>
   ),
 );

@@ -7,6 +7,7 @@ import { getProductImage } from "@/lib/images";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
 
@@ -15,15 +16,27 @@ const categories = ["All", "Men", "Women"];
 export default function ProductSection() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
   const [activeCategory, setActiveCategory] = useState("All");
   const [previewProduct, setPreviewProduct] = useState<Product | null>(null);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchProducts = async () => {
       try {
         setLoading(true);
+        setError(null);
         // http://localhost:4000
-        const res = await fetch("https://tailors-backend.onrender.com/products/getallproducts");
+        const res = await fetch("https://tailors-backend.onrender.com/products/getallproducts", {
+          signal: controller.signal,
+        });
+
+        if (!res.ok) {
+          throw new Error(`Request failed with status ${res.status}`);
+        }
+
         const data = await res.json();
 
         const formatted = Array.isArray(data)
@@ -33,17 +46,23 @@ export default function ProductSection() {
           }))
           : [];
 
-        setProducts(formatted);
+        if (!controller.signal.aborted) setProducts(formatted);
       } catch (err) {
+        if (controller.signal.aborted) return;
         console.log("FETCH ERROR:", err);
         setProducts([]);
+        setError("We couldn't load the collection right now.");
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
 
     fetchProducts();
-  }, []);
+
+    return () => controller.abort();
+  }, [retryKey]);
+
+  const retryFetch = () => setRetryKey((key) => key + 1);
 
   const filtered =
     activeCategory === "All"
@@ -62,7 +81,7 @@ export default function ProductSection() {
           viewport={{ once: true }}
           className="text-center mb-6"
         >
-          <span className="inline-block px-4 py-1.5 rounded-full bg-gold/10 text-gold text-xs uppercase tracking-[0.25em] mb-4 font-body font-medium">
+          <span className="inline-block px-4 py-1.5 rounded-full bg-gold/10 text-gold-ink text-xs uppercase tracking-[0.25em] mb-4 font-body font-medium">
             🔥 Our Collection
           </span>
           <h2 className="font-display text-4xl md:text-6xl font-bold text-foreground">
@@ -78,7 +97,9 @@ export default function ProductSection() {
           {categories.map((cat) => (
             <button
               key={cat}
+              type="button"
               onClick={() => setActiveCategory(cat)}
+              aria-pressed={activeCategory === cat}
               className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${activeCategory === cat
                   ? "bg-foreground text-background shadow-lg"
                   : "bg-card text-muted-foreground hover:bg-card/80 border border-border"
@@ -90,9 +111,32 @@ export default function ProductSection() {
         </div>
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex flex-col items-center justify-center py-20 gap-4"
+          >
             <Loader2 className="animate-spin text-gold" size={44} />
             <p className="text-muted-foreground text-sm">Loading collection...</p>
+          </div>
+        ) : error ? (
+          <div
+            role="alert"
+            className="max-w-md mx-auto text-center bg-card border border-border/50 rounded-2xl px-6 py-14 shadow-sm flex flex-col items-center gap-4"
+          >
+            <p className="text-foreground font-medium">Unable to load the collection</p>
+            <p className="text-muted-foreground text-sm">{error}</p>
+            <button
+              type="button"
+              onClick={retryFetch}
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-foreground text-background text-sm font-semibold hover:bg-gold hover:text-accent-foreground transition-all duration-300 focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none"
+            >
+              Try again
+            </button>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-20">
+            <p className="text-muted-foreground text-sm">No products in this category yet.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -110,18 +154,26 @@ export default function ProductSection() {
                     src={getProductImage(product._id, product.imageURL)}
                     alt={product.name}
                     loading="lazy"
+                    decoding="async"
                     width={640}
                     height={800}
+                    onError={(e) => {
+                      const img = e.currentTarget;
+                      img.onerror = null;
+                      img.src = getProductImage(product._id);
+                    }}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
                   />
 
                   {/* Overlay */}
-                  <div
-                    className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/20 transition-colors duration-500 flex items-center justify-center cursor-pointer"
+                  <button
+                    type="button"
+                    aria-label={`Preview ${product.name}`}
                     onClick={() => setPreviewProduct(product)}
+                    className="absolute inset-0 w-full h-full bg-foreground/0 group-hover:bg-foreground/20 group-focus-within:bg-foreground/20 transition-colors duration-500 flex items-center justify-center cursor-pointer focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none"
                   >
-                    <Eye className="text-primary-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-300" size={32} />
-                  </div>
+                    <Eye className="text-primary-foreground opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300" size={32} />
+                  </button>
 
                   {/* Category badge */}
                   {product.category && (
@@ -142,7 +194,7 @@ export default function ProductSection() {
 
                   <div className="flex items-center justify-between">
                     <span className="font-display text-2xl font-bold text-gold">
-                      ₦{product.price.toLocaleString()}
+                      ₦{Number(product.price).toLocaleString()}
                     </span>
 
                     <a
@@ -168,12 +220,21 @@ export default function ProductSection() {
             <DialogTitle className="sr-only">
               {previewProduct?.name ?? "Product preview"}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Preview of {previewProduct?.name ?? "selected product"}
+            </DialogDescription>
 
             {previewProduct && (
               <div className="flex flex-col">
                 <img
                   src={getProductImage(previewProduct._id, previewProduct.imageURL)}
                   alt={previewProduct.name}
+                  decoding="async"
+                  onError={(e) => {
+                    const img = e.currentTarget;
+                    img.onerror = null;
+                    img.src = getProductImage(previewProduct._id);
+                  }}
                   className="w-full max-h-[75vh] object-contain rounded-lg"
                 />
 
@@ -183,7 +244,7 @@ export default function ProductSection() {
                       {previewProduct.name}
                     </h3>
                     <span className="font-display text-lg font-bold text-gold">
-                      ₦{previewProduct.price.toLocaleString()}
+                      ₦{Number(previewProduct.price).toLocaleString()}
                     </span>
                   </div>
 

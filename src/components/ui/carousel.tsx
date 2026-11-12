@@ -39,7 +39,7 @@ function useCarousel() {
 }
 
 const Carousel = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement> & CarouselProps>(
-  ({ orientation = "horizontal", opts, setApi, plugins, className, children, ...props }, ref) => {
+  ({ orientation = "horizontal", opts, setApi, plugins, className, children, "aria-label": ariaLabel, ...props }, ref) => {
     const [carouselRef, api] = useEmblaCarousel(
       {
         ...opts,
@@ -49,6 +49,9 @@ const Carousel = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEl
     );
     const [canScrollPrev, setCanScrollPrev] = React.useState(false);
     const [canScrollNext, setCanScrollNext] = React.useState(false);
+
+    const carouselOrientation = orientation ?? (opts?.axis === "y" ? "vertical" : "horizontal");
+    const isHorizontal = carouselOrientation === "horizontal";
 
     const onSelect = React.useCallback((api: CarouselApi) => {
       if (!api) {
@@ -69,15 +72,18 @@ const Carousel = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEl
 
     const handleKeyDown = React.useCallback(
       (event: React.KeyboardEvent<HTMLDivElement>) => {
-        if (event.key === "ArrowLeft") {
+        const prevKey = isHorizontal ? "ArrowLeft" : "ArrowUp";
+        const nextKey = isHorizontal ? "ArrowRight" : "ArrowDown";
+
+        if (event.key === prevKey) {
           event.preventDefault();
           scrollPrev();
-        } else if (event.key === "ArrowRight") {
+        } else if (event.key === nextKey) {
           event.preventDefault();
           scrollNext();
         }
       },
-      [scrollPrev, scrollNext],
+      [isHorizontal, scrollPrev, scrollNext],
     );
 
     React.useEffect(() => {
@@ -98,7 +104,8 @@ const Carousel = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEl
       api.on("select", onSelect);
 
       return () => {
-        api?.off("select", onSelect);
+        api.off("reInit", onSelect);
+        api.off("select", onSelect);
       };
     }, [api, onSelect]);
 
@@ -108,7 +115,7 @@ const Carousel = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEl
           carouselRef,
           api: api,
           opts,
-          orientation: orientation || (opts?.axis === "y" ? "vertical" : "horizontal"),
+          orientation: carouselOrientation,
           scrollPrev,
           scrollNext,
           canScrollPrev,
@@ -121,6 +128,7 @@ const Carousel = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEl
           className={cn("relative", className)}
           role="region"
           aria-roledescription="carousel"
+          aria-label={ariaLabel}
           {...props}
         >
           {children}

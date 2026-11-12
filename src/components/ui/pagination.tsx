@@ -6,10 +6,10 @@ import { ButtonProps, buttonVariants } from "@/components/ui/button";
 
 const Pagination = ({ className, ...props }: React.ComponentProps<"nav">) => (
   <nav
+    {...props}
     role="navigation"
     aria-label="pagination"
     className={cn("mx-auto flex w-full justify-center", className)}
-    {...props}
   />
 );
 Pagination.displayName = "Pagination";
@@ -33,6 +33,7 @@ type PaginationLinkProps = {
 
 const PaginationLink = ({ className, isActive, size = "icon", ...props }: PaginationLinkProps) => (
   <a
+    {...props}
     aria-current={isActive ? "page" : undefined}
     className={cn(
       buttonVariants({
@@ -41,7 +42,6 @@ const PaginationLink = ({ className, isActive, size = "icon", ...props }: Pagina
       }),
       className,
     )}
-    {...props}
   />
 );
 PaginationLink.displayName = "PaginationLink";

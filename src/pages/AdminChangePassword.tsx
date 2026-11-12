@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { isAdminLoggedIn, changeAdminPassword } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import { Lock, ArrowLeft, Eye, EyeOff, Shield } from "lucide-react";
 
@@ -52,7 +51,12 @@ export default function AdminChangePassword() {
       }),
     });
 
-    const data = await res.json();
+    let data: { message?: string } | null = null;
+    try {
+      data = await res.json();
+    } catch {
+      data = null;
+    }
 
     if (res.ok) {
       toast({ title: "Password changed successfully! 🔒" });
@@ -60,10 +64,12 @@ export default function AdminChangePassword() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      navigate("/admin/dashboard");
     } else {
       toast({
         title: "Error",
-        description: data.message,
+        description:
+          data?.message ?? `Request failed (${res.status}${res.statusText ? ` ${res.statusText}` : ""})`,
         variant: "destructive",
       });
     }
@@ -103,13 +109,15 @@ export default function AdminChangePassword() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Current Password</label>
+              <label htmlFor="current-password" className="block text-sm font-medium text-foreground mb-1.5">Current Password</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
                 <input
+                  id="current-password"
                   type={showCurrent ? "text" : "password"}
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
+                  autoComplete="current-password"
                   required
                   className="w-full pl-10 pr-10 py-3 rounded-xl border border-border bg-background text-foreground focus:ring-2 focus:ring-gold outline-none text-sm"
                   placeholder="Enter current password"
@@ -117,6 +125,8 @@ export default function AdminChangePassword() {
                 <button
                   type="button"
                   onClick={() => setShowCurrent(!showCurrent)}
+                  aria-label={showCurrent ? "Hide current password" : "Show current password"}
+                  aria-pressed={showCurrent}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   {showCurrent ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -125,45 +135,55 @@ export default function AdminChangePassword() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">New Password</label>
+              <label htmlFor="new-password" className="block text-sm font-medium text-foreground mb-1.5">New Password</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
                 <input
+                  id="new-password"
                   type={showNew ? "text" : "password"}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
+                  autoComplete="new-password"
                   required
+                  aria-invalid={newPassword.length > 0 && newPassword.length < 6}
+                  aria-describedby={newPassword.length > 0 && newPassword.length < 6 ? "new-password-error" : undefined}
                   className="w-full pl-10 pr-10 py-3 rounded-xl border border-border bg-background text-foreground focus:ring-2 focus:ring-gold outline-none text-sm"
                   placeholder="Enter new password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowNew(!showNew)}
+                  aria-label={showNew ? "Hide new password" : "Show new password"}
+                  aria-pressed={showNew}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   {showNew ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
               {newPassword.length > 0 && newPassword.length < 6 && (
-                <p className="text-destructive text-xs mt-1">Must be at least 6 characters</p>
+                <p id="new-password-error" role="alert" className="text-destructive text-xs mt-1">Must be at least 6 characters</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Confirm New Password</label>
+              <label htmlFor="confirm-password" className="block text-sm font-medium text-foreground mb-1.5">Confirm New Password</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
                 <input
+                  id="confirm-password"
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
+                  autoComplete="new-password"
                   required
+                  aria-invalid={confirmPassword.length > 0 && newPassword !== confirmPassword}
+                  aria-describedby={confirmPassword.length > 0 && newPassword !== confirmPassword ? "confirm-password-error" : undefined}
                   className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-background text-foreground focus:ring-2 focus:ring-gold outline-none text-sm"
                   placeholder="Confirm new password"
                 />
               </div>
               {confirmPassword.length > 0 && newPassword !== confirmPassword && (
-                <p className="text-destructive text-xs mt-1">Passwords do not match</p>
+                <p id="confirm-password-error" role="alert" className="text-destructive text-xs mt-1">Passwords do not match</p>
               )}
             </div>
 

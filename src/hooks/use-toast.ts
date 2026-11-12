@@ -52,6 +52,19 @@ interface State {
 
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
 
+const clearRemoveTimeout = (toastId: string) => {
+  const timeout = toastTimeouts.get(toastId);
+  if (timeout !== undefined) {
+    clearTimeout(timeout);
+    toastTimeouts.delete(toastId);
+  }
+};
+
+const clearAllRemoveTimeouts = () => {
+  toastTimeouts.forEach((timeout) => clearTimeout(timeout));
+  toastTimeouts.clear();
+};
+
 const addToRemoveQueue = (toastId: string) => {
   if (toastTimeouts.has(toastId)) {
     return;
@@ -88,9 +101,12 @@ export const reducer = (state: State, action: Action): State => {
       // ! Side effects ! - This could be extracted into a dismissToast() action,
       // but I'll keep it here for simplicity
       if (toastId) {
+        // Reset any pending removal so a manual dismissal leaves a single live timer.
+        clearRemoveTimeout(toastId);
         addToRemoveQueue(toastId);
       } else {
         state.toasts.forEach((toast) => {
+          clearRemoveTimeout(toast.id);
           addToRemoveQueue(toast.id);
         });
       }
@@ -109,11 +125,13 @@ export const reducer = (state: State, action: Action): State => {
     }
     case "REMOVE_TOAST":
       if (action.toastId === undefined) {
+        clearAllRemoveTimeouts();
         return {
           ...state,
           toasts: [],
         };
       }
+      clearRemoveTimeout(action.toastId);
       return {
         ...state,
         toasts: state.toasts.filter((t) => t.id !== action.toastId),
@@ -173,6 +191,10 @@ function useToast() {
       const index = listeners.indexOf(setState);
       if (index > -1) {
         listeners.splice(index, 1);
+      }
+      // Once the last consumer unmounts, drop any pending removal timers.
+      if (listeners.length === 0) {
+        clearAllRemoveTimeouts();
       }
     };
   }, [state]);

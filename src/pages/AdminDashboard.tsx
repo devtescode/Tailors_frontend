@@ -5,6 +5,28 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, LogOut, X, Menu, ChevronDown, Upload, Image, Check, PlusCircle } from "lucide-react";
 import Swal from "sweetalert2";
 
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+
+const revokePreview = (url?: string | null) => {
+  if (url && url.startsWith("blob:")) {
+    URL.revokeObjectURL(url);
+  }
+};
+
+const createEmptyProduct = () => ({
+  id: crypto.randomUUID(),
+  name: "",
+  price: "",
+  description: "",
+  category: "",
+  imageURL: null as File | string | null,
+  imagePreview: null as string | null,
+});
+
+const isProductRowValid = (product: { name: string; price: string }) => {
+  const price = Number(product.price);
+  return product.name.trim() !== "" && Number.isFinite(price) && price > 0;
+};
 
 export default function AdminDashboard() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -13,7 +35,9 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
   const [productsLoading, setProductsLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   // const [form, setForm] = useState({
   //   name: "",
@@ -30,15 +54,20 @@ export default function AdminDashboard() {
     category: string;
     imageURL: File | string | null;
     imagePreview: string | null;
-  }[]>([{
-    id: crypto.randomUUID(),
-    name: "",
-    price: "",
-    description: "",
-    category: "",
-    imageURL: null,
-    imagePreview: null,
-  }]);
+  }[]>([createEmptyProduct()]);
+
+  const productsToAddRef = useRef(productsToAdd);
+
+  useEffect(() => {
+    productsToAddRef.current = productsToAdd;
+  }, [productsToAdd]);
+
+  // Revoke any remaining blob previews on unmount
+  useEffect(() => {
+    return () => {
+      productsToAddRef.current.forEach((p) => revokePreview(p.imagePreview));
+    };
+  }, []);
 
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -52,6 +81,8 @@ export default function AdminDashboard() {
       return;
     }
 
+    let cancelled = false;
+
     const fetchProducts = async () => {
       try {
         const res = await fetch("https://tailors-backend.onrender.com/products/getallproducts", {
@@ -60,18 +91,43 @@ export default function AdminDashboard() {
           },
         });
 
+        if (res.status === 401) {
+          sessionStorage.removeItem("token");
+          navigate("/admin");
+          return;
+        }
+
+        if (!res.ok) {
+          throw new Error(`Failed to fetch products (${res.status})`);
+        }
+
         const data = await res.json();
 
-        setProducts(Array.isArray(data) ? data : []);
+        if (!cancelled) {
+          setProducts(Array.isArray(data) ? data : []);
+        }
       } catch (err) {
         console.log(err);
+        if (!cancelled) {
+          toast({
+            title: "Error",
+            description: "Failed to load products. Please try again.",
+            variant: "destructive",
+          });
+        }
       } finally {
-        setProductsLoading(false);
+        if (!cancelled) {
+          setProductsLoading(false);
+        }
       }
     };
 
     fetchProducts();
-  }, [navigate]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate, token]);
 
   // Close mobile menu when clicking outside
   useEffect(() => {
@@ -86,46 +142,46 @@ export default function AdminDashboard() {
   }, []);
 
   const resetForm = () => {
-    setProductsToAdd([{
-      id: crypto.randomUUID(),
-      name: "",
-      price: "",
-      description: "",
-      category: "",
-      imageURL: null,
-      imagePreview: null,
-    }]);
+    setProductsToAdd((prev) => {
+      prev.forEach((p) => revokePreview(p.imagePreview));
+      return [createEmptyProduct()];
+    });
     setEditingProduct(null);
+    setFormError(null);
     setShowForm(false);
   };
 
   // Add another product form
   const addAnotherProduct = () => {
-    setProductsToAdd([...productsToAdd, {
-      id: crypto.randomUUID(),
-      name: "",
-      price: "",
-      description: "",
-      category: "",
-      imageURL: null,
-      imagePreview: null,
-    }]);
+    setProductsToAdd((prev) => [...prev, createEmptyProduct()]);
   };
 
   // Remove a product form
   const removeProductForm = (id: string) => {
-    if (productsToAdd.length > 1) {
-      setProductsToAdd(productsToAdd.filter(p => p.id !== id));
-    }
+    setProductsToAdd((prev) => {
+      if (prev.length <= 1) return prev;
+
+      const target = prev.find((p) => p.id === id);
+      revokePreview(target?.imagePreview);
+
+      return prev.filter((p) => p.id !== id);
+    });
   };
 
   // Update a specific product form
   const updateProductForm = (id: string, field: string, value: any) => {
-    setProductsToAdd(productsToAdd.map(p => {
+    setFormError(null);
+    setProductsToAdd((prev) => prev.map((p) => {
       if (p.id === id) {
         const updated = { ...p, [field]: value };
-        if (field === 'imageURL' && value instanceof File) {
-          updated.imagePreview = URL.createObjectURL(value);
+        if (field === 'imageURL') {
+          revokePreview(p.imagePreview);
+          updated.imagePreview =
+            value instanceof File
+              ? URL.createObjectURL(value)
+              : typeof value === 'string'
+                ? value
+                : null;
         }
         return updated;
       }
@@ -133,16 +189,82 @@ export default function AdminDashboard() {
     }));
   };
 
+  // Validate and accept an image file for a product row
+  const handleImageChange = (id: string, file?: File | null) => {
+    if (!file) return;
+
+    if (!file.type.startsWith("image/") || file.size > MAX_IMAGE_SIZE) {
+      toast({
+        title: "Invalid image",
+        description: "Please choose an image file (PNG, JPG, etc.) smaller than 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    updateProductForm(id, "imageURL", file);
+  };
+
+  // Close the modal with Escape
+  useEffect(() => {
+    if (!showForm) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        resetForm();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [showForm]);
+
+  // Move focus into the modal when it opens
+  useEffect(() => {
+    if (!showForm) return;
+
+    const timeout = window.setTimeout(() => {
+      const modal = modalRef.current;
+      if (!modal) return;
+
+      const firstField = modal.querySelector<HTMLElement>('input, select, textarea');
+      if (firstField) {
+        firstField.focus();
+      } else {
+        modal.focus();
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, [showForm]);
+
   // ✅ SUBMIT MULTIPLE PRODUCTS
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const rows = editingProduct ? productsToAdd.slice(0, 1) : productsToAdd;
+    const touchedInvalid = rows.some(
+      (p) => (p.name.trim() !== "" || String(p.price).trim() !== "") && !isProductRowValid(p)
+    );
+    const validProducts = rows.filter(isProductRowValid);
+
+    if (touchedInvalid) {
+      setFormError("Each product needs a name and a price greater than 0.");
+      return;
+    }
+
+    if (validProducts.length === 0) {
+      setFormError("Add at least one product with a name and a price greater than 0.");
+      return;
+    }
+
+    setFormError(null);
     setLoading(true);
 
     try {
-      // Filter out products that have at least a name
-      const validProducts = productsToAdd.filter(p => p.name.trim() !== "");
+      const rowsToSubmit = editingProduct ? validProducts.slice(0, 1) : validProducts;
 
-      for (const product of validProducts) {
+      for (const product of rowsToSubmit) {
         const formData = new FormData();
 
         formData.append("name", product.name);
@@ -214,6 +336,7 @@ export default function AdminDashboard() {
   // ✅ EDIT PRODUCT
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
+    setFormError(null);
     setProductsToAdd([{
       id: crypto.randomUUID(),
       name: product.name,
@@ -240,17 +363,32 @@ export default function AdminDashboard() {
 
     if (!result.isConfirmed) return;
 
-    const res = await fetch(
-      `https://tailors-backend.onrender.com/products/deleteproducts/${id}`,
-      {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    try {
+      const res = await fetch(
+        `https://tailors-backend.onrender.com/products/deleteproducts/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-    if (res.ok) {
+      if (res.status === 401) {
+        sessionStorage.removeItem("token");
+        navigate("/admin");
+        return;
+      }
+
+      if (!res.ok) {
+        toast({
+          title: "Delete failed",
+          description: "Failed to delete product. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setProducts((prev) => prev.filter((p: any) => p._id !== id));
 
       await Swal.fire({
@@ -260,11 +398,13 @@ export default function AdminDashboard() {
       });
 
       toast({ title: "Product deleted" });
-    } else {
-      Swal.fire({
-        title: "Error",
-        text: "Failed to delete product",
-        icon: "error",
+    } catch (err) {
+      console.error("DELETE ERROR:", err);
+
+      toast({
+        title: "Delete failed",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
       });
     }
   };
@@ -368,7 +508,7 @@ export default function AdminDashboard() {
       <main className="container mx-auto px-6 py-8">
 
         <div className="flex items-center justify-between mb-8">
-          <h2 className="font-display text-2xl font-bold text-foreground">
+          <h2 aria-live="polite" className="font-display text-2xl font-bold text-foreground">
             Products ({products.length})
           </h2>
 
@@ -386,15 +526,23 @@ export default function AdminDashboard() {
 
         {showForm && (
           <div className="fixed inset-0 bg-foreground/90 z-50 flex items-center justify-center p-4">
-            <div className="bg-card rounded-xl p-0 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div
+              ref={modalRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="product-form-title"
+              className="bg-card rounded-xl p-0 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
+            >
 
               <div className="sticky top-0 z-20 bg-card border-b border-border px-4 py-4 flex items-center justify-between">
-                <h3 className="font-display text-xl font-bold text-foreground">
+                <h3 id="product-form-title" className="font-display text-xl font-bold text-foreground">
                   {editingProduct ? "Edit Product" : "Add Products"}
                 </h3>
 
                 <button
+                  type="button"
                   onClick={resetForm}
+                  aria-label="Close product form"
                   className="text-muted-foreground hover:text-foreground p-2 rounded-lg hover:bg-secondary transition-colors"
                 >
                   <X size={20} />
@@ -416,6 +564,7 @@ export default function AdminDashboard() {
                       <button
                         type="button"
                         onClick={() => removeProductForm(product.id)}
+                        aria-label={`Remove product ${index + 1}`}
                         className="absolute top-3 right-3 text-muted-foreground hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
                       >
                         <X size={16} />
@@ -425,8 +574,9 @@ export default function AdminDashboard() {
                     <div className="grid gap-4 mt-2">
                       {/* NAME */}
                       <div>
-                        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Product Name</label>
+                        <label htmlFor={`name-${product.id}`} className="text-xs font-medium text-muted-foreground mb-1.5 block">Product Name</label>
                         <input
+                          id={`name-${product.id}`}
                           value={product.name}
                           onChange={(e) => updateProductForm(product.id, 'name', e.target.value)}
                           placeholder="Enter product name"
@@ -437,9 +587,12 @@ export default function AdminDashboard() {
                       <div className="grid grid-cols-2 gap-4">
                         {/* PRICE */}
                         <div>
-                          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Price (₦)</label>
+                          <label htmlFor={`price-${product.id}`} className="text-xs font-medium text-muted-foreground mb-1.5 block">Price (₦)</label>
                           <input
+                            id={`price-${product.id}`}
                             type="number"
+                            min="0"
+                            step="0.01"
                             value={product.price}
                             onChange={(e) => updateProductForm(product.id, 'price', e.target.value)}
                             placeholder="0.00"
@@ -449,8 +602,9 @@ export default function AdminDashboard() {
 
                         {/* CATEGORY */}
                         <div>
-                          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Category</label>
+                          <label htmlFor={`category-${product.id}`} className="text-xs font-medium text-muted-foreground mb-1.5 block">Category</label>
                           <select
+                            id={`category-${product.id}`}
                             value={product.category}
                             onChange={(e) => updateProductForm(product.id, 'category', e.target.value)}
                             className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-gold focus:border-transparent outline-none transition text-sm"
@@ -464,8 +618,9 @@ export default function AdminDashboard() {
 
                       {/* DESCRIPTION */}
                       <div>
-                        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Description</label>
+                        <label htmlFor={`description-${product.id}`} className="text-xs font-medium text-muted-foreground mb-1.5 block">Description</label>
                         <textarea
+                          id={`description-${product.id}`}
                           value={product.description}
                           onChange={(e) => updateProductForm(product.id, 'description', e.target.value)}
                           placeholder="Product description..."
@@ -476,7 +631,7 @@ export default function AdminDashboard() {
 
                       {/* FILE UPLOAD - NEW STYLING */}
                       <div>
-                        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Product Image</label>
+                        <span className="text-xs font-medium text-muted-foreground mb-1.5 block">Product Image</span>
 
                         {/* Show preview if image selected */}
                         {(product.imagePreview || (editingProduct && typeof product.imageURL === 'string')) ? (
@@ -484,7 +639,7 @@ export default function AdminDashboard() {
                             <div className="flex items-center gap-4 p-3 bg-secondary/50 rounded-lg border border-border">
                               <div className="w-16 h-16 rounded-lg overflow-hidden bg-background flex-shrink-0">
                                 <img
-                                  src={product.imagePreview || product.imageURL}
+                                  src={product.imagePreview ?? (typeof product.imageURL === "string" ? product.imageURL : undefined)}
                                   alt="Preview"
                                   className="w-full h-full object-cover"
                                 />
@@ -495,12 +650,18 @@ export default function AdminDashboard() {
                                 </p>
                                 <p className="text-xs text-muted-foreground">Click to change</p>
                               </div>
-                              <label className="cursor-pointer p-2 rounded-lg bg-foreground text-background hover:opacity-90 transition-opacity">
+                              <label
+                                htmlFor={`image-${product.id}`}
+                                aria-label={`Replace product image ${index + 1}`}
+                                className="cursor-pointer p-2 rounded-lg bg-foreground text-background hover:opacity-90 transition-opacity"
+                              >
                                 <Upload size={16} />
                                 <input
+                                  id={`image-${product.id}`}
                                   type="file"
                                   accept="image/*"
-                                  onChange={(e) => updateProductForm(product.id, 'imageURL', e.target.files?.[0])}
+                                  aria-label={`Replace product image ${index + 1}`}
+                                  onChange={(e) => handleImageChange(product.id, e.target.files?.[0])}
                                   className="hidden"
                                 />
                               </label>
@@ -508,7 +669,10 @@ export default function AdminDashboard() {
                           </div>
                         ) : (
                           /* Upload Area */
-                          <label className="flex flex-col items-center justify-center w-full h-28 rounded-xl border-2 border-dashed border-border hover:border-gold hover:bg-secondary/20 transition-all cursor-pointer group">
+                          <label
+                            htmlFor={`image-${product.id}`}
+                            className="flex flex-col items-center justify-center w-full h-28 rounded-xl border-2 border-dashed border-border hover:border-gold hover:bg-secondary/20 transition-all cursor-pointer group"
+                          >
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
                               <div className="w-10 h-10 rounded-full bg-secondary group-hover:bg-gold/20 flex items-center justify-center mb-2 transition-colors">
                                 <Image className="w-5 h-5 text-muted-foreground group-hover:text-gold transition-colors" />
@@ -519,9 +683,11 @@ export default function AdminDashboard() {
                               <p className="text-xs text-muted-foreground mt-1">PNG, JPG up to 5MB</p>
                             </div>
                             <input
+                              id={`image-${product.id}`}
                               type="file"
                               accept="image/*"
-                              onChange={(e) => updateProductForm(product.id, 'imageURL', e.target.files?.[0])}
+                              aria-label={`Upload product image ${index + 1}`}
+                              onChange={(e) => handleImageChange(product.id, e.target.files?.[0])}
                               className="hidden"
                             />
                           </label>
@@ -541,6 +707,16 @@ export default function AdminDashboard() {
                     <PlusCircle size={18} />
                     Add Another Product
                   </button>
+                )}
+
+                {/* FORM ERROR */}
+                {formError && (
+                  <p
+                    role="alert"
+                    className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
+                  >
+                    {formError}
+                  </p>
                 )}
 
                 {/* SUBMIT BUTTON */}
@@ -570,12 +746,13 @@ export default function AdminDashboard() {
 
             {/* Loading State */}
             {productsLoading && (
-              <div className="flex flex-col items-center justify-center py-20">
-                <div className="relative">
+              <div role="status" className="flex flex-col items-center justify-center py-20">
+                <div className="relative" aria-hidden="true">
                   <div className="w-16 h-16 border-4 border-gold/20 rounded-full"></div>
                   <div className="absolute top-0 left-0 w-16 h-16 border-4 border-gold border-t-transparent rounded-full animate-spin"></div>
                 </div>
-                <p className="mt-4 text-muted-foreground font-medium">Loading products...</p>
+                <p aria-hidden="true" className="mt-4 text-muted-foreground font-medium">Loading products...</p>
+                <span className="sr-only">Loading products...</span>
               </div>
             )}
 
@@ -610,11 +787,11 @@ export default function AdminDashboard() {
 
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Image</th>
-                    <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Name</th>
-                    <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Category</th>
-                    <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Price</th>
-                    <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">Actions</th>
+                    <th scope="col" className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Image</th>
+                    <th scope="col" className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Name</th>
+                    <th scope="col" className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Category</th>
+                    <th scope="col" className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Price</th>
+                    <th scope="col" className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
 
@@ -656,8 +833,8 @@ export default function AdminDashboard() {
                         </span>
                       </td>
                       {/* PRICE */}
-                      <td className="px-6 py-4 font-semibold text-gold">
-                        ₦{product.price.toLocaleString()}
+                      <td className="px-6 py-4 font-semibold text-gold-ink">
+                        ₦{Number(product.price).toLocaleString()}
                       </td>
 
                       {/* ACTIONS */}
@@ -666,6 +843,7 @@ export default function AdminDashboard() {
 
                           <button
                             onClick={() => handleEdit(product)}
+                            aria-label={`Edit ${product.name}`}
                             className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground"
                           >
                             <Pencil size={16} />
@@ -673,6 +851,7 @@ export default function AdminDashboard() {
 
                           <button
                             onClick={() => handleDelete(product._id)}
+                            aria-label={`Delete ${product.name}`}
                             className="p-2 rounded-lg hover:bg-red-100 text-muted-foreground hover:text-red-500"
                           >
                             <Trash2 size={16} />

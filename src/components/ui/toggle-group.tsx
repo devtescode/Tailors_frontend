@@ -27,13 +27,17 @@ const ToggleGroupItem = React.forwardRef<
 >(({ className, children, variant, size, ...props }, ref) => {
   const context = React.useContext(ToggleGroupContext);
 
+  // Per-item props take precedence over the group defaults from context.
+  const resolvedVariant = variant ?? context.variant;
+  const resolvedSize = size ?? context.size;
+
   return (
     <ToggleGroupPrimitive.Item
       ref={ref}
       className={cn(
         toggleVariants({
-          variant: context.variant || variant,
-          size: context.size || size,
+          variant: resolvedVariant,
+          size: resolvedSize,
         }),
         className,
       )}
