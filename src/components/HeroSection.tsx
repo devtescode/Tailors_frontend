@@ -72,7 +72,7 @@ export default function HeroSection() {
 
             <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               <span className="inline-flex items-center gap-1.5 text-gold-ink">
-                <Sparkles aria-hidden="true" className="h-3.5 w-3.5" />
+                {/* <Sparkles aria-hidden="true" className="h-3.5 w-3.5" /> */}
                 Made to measure
               </span>
               <span aria-hidden="true" className="text-border">
