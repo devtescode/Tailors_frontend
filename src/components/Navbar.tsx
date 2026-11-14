@@ -143,11 +143,11 @@ export default function Navbar() {
           {mobileOpen && (
             <motion.div
               id="mobile-navigation"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-              className="overflow-hidden border-t border-border/70 bg-cream lg:hidden"
+              className="absolute inset-x-0 top-full z-50 border-t border-border/70 bg-cream shadow-[0_20px_30px_-24px_hsl(var(--ink)/0.5)] lg:hidden"
             >
               <nav
                 aria-label="Mobile"
