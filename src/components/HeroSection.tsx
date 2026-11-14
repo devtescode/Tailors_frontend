@@ -145,13 +145,13 @@ export default function HeroSection() {
               </div>
             </div>
 
-            <div
+            {/* <div
               aria-hidden="true"
               className="absolute -bottom-4 left-6 hidden h-16 w-16 border border-gold/60 bg-cream sm:block"
             />
             <span className="absolute -bottom-7 left-[2.35rem] hidden font-script text-3xl text-burgundy sm:block">
               Zahra
-            </span>
+            </span> */}
           </motion.div>
         </div>
       </div>
