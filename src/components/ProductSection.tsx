@@ -1,6 +1,6 @@
 import { useState, type SyntheticEvent } from "react";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
-import { AlertCircle, Eye, Loader2, RefreshCw } from "lucide-react";
+import { AlertCircle, ChevronLeft, ChevronRight, Eye, Loader2, RefreshCw } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 
 import SectionHeading from "@/components/brand/SectionHeading";
@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 type CategoryFilter = "All" | "Men" | "Women";
 
 const CATEGORIES: readonly CategoryFilter[] = ["All", "Men", "Women"];
+const PAGE_SIZE = 6;
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
@@ -75,6 +76,7 @@ function describeProduct(product: CatalogItem): string {
 
 export default function ProductSection() {
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>("All");
+  const [currentPage, setCurrentPage] = useState(1);
   const [previewProduct, setPreviewProduct] = useState<CatalogItem | null>(null);
 
   const {
@@ -105,6 +107,11 @@ export default function ProductSection() {
       : products.filter(
           (product) => normalizeCategory(product.category) === activeCategory,
         );
+  const pageCount = Math.ceil(visibleProducts.length / PAGE_SIZE);
+  const paginatedProducts = visibleProducts.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
 
   const enquiryLink = whatsappLink(
     buildEnquiryMessage(
@@ -168,7 +175,10 @@ export default function ProductSection() {
                   <button
                     key={category}
                     type="button"
-                    onClick={() => setActiveCategory(category)}
+                    onClick={() => {
+                      setActiveCategory(category);
+                      setCurrentPage(1);
+                    }}
                     aria-pressed={isActive}
                     className={cn(
                       "inline-flex min-h-11 items-center gap-2 rounded-full border px-4 py-2 font-body text-[0.62rem] font-semibold uppercase tracking-[0.18em] transition-colors duration-300 sm:px-5",
@@ -292,7 +302,7 @@ export default function ProductSection() {
             viewport={{ once: true, margin: "-60px" }}
             className="mt-8 grid list-none grid-cols-1 gap-6 p-0 sm:mt-10 sm:grid-cols-2 lg:grid-cols-3 lg:gap-7"
           >
-            {visibleProducts.map((product) => {
+            {paginatedProducts.map((product) => {
               const categoryLabel = product.category?.trim();
               const description = describeProduct(product);
 
@@ -377,6 +387,32 @@ export default function ProductSection() {
               );
             })}
           </motion.ul>
+        )}
+
+        {!isLoading && !isError && pageCount > 1 && (
+          <nav aria-label="Collection pages" className="mt-10 flex items-center justify-center gap-4">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+              disabled={currentPage === 1}
+              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-white px-4 font-body text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-ink transition-colors hover:border-burgundy/40 hover:text-burgundy disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ChevronLeft aria-hidden="true" className="h-4 w-4" />
+              Previous
+            </button>
+            <span aria-live="polite" className="font-body text-xs text-muted-foreground">
+              Page {currentPage} of {pageCount}
+            </span>
+            <button
+              type="button"
+              onClick={() => setCurrentPage((page) => Math.min(pageCount, page + 1))}
+              disabled={currentPage === pageCount}
+              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-white px-4 font-body text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-ink transition-colors hover:border-burgundy/40 hover:text-burgundy disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Next
+              <ChevronRight aria-hidden="true" className="h-4 w-4" />
+            </button>
+          </nav>
         )}
       </div>
 
