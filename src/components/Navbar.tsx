@@ -75,6 +75,20 @@ export default function Navbar() {
         </div>
       </div>
 
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.button
+            type="button"
+            aria-label="Close navigation menu"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={closeMobile}
+            className="fixed inset-0 z-40 cursor-default bg-ink/20 backdrop-blur-sm lg:hidden"
+          />
+        )}
+      </AnimatePresence>
+
       <header
         ref={headerRef}
         className={cn(

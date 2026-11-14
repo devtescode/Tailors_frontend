@@ -102,7 +102,7 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-4 pt-7 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
+        {/* <div className="flex flex-col gap-4 pt-7 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
           <p className="text-[0.66rem] uppercase tracking-[0.2em] text-cream/50">
             © {year} Style by Zahra. All rights reserved.
           </p>
@@ -116,7 +116,7 @@ export default function Footer() {
               Admin
             </Link>
           </div>
-        </div>
+        </div> */}
       </div>
     </footer>
   );
