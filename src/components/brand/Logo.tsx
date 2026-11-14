@@ -5,6 +5,8 @@ interface LogoProps {
   variant?: "dark" | "light";
   className?: string;
   showTagline?: boolean;
+  /** Hide the wordmark on very small screens, keeping only the monogram. */
+  compact?: boolean;
   onClick?: () => void;
 }
 
@@ -15,6 +17,7 @@ export default function Logo({
   variant = "dark",
   className,
   showTagline = true,
+  compact = false,
   onClick,
 }: LogoProps) {
   const light = variant === "light";
@@ -42,7 +45,12 @@ export default function Logo({
         />
       </span>
 
-      <span className="flex min-w-0 flex-col leading-none">
+      <span
+        className={cn(
+          "flex min-w-0 flex-col leading-none",
+          compact && "hidden sm:flex",
+        )}
+      >
         <span
           className={cn(
             "font-display text-[1.16rem] tracking-[-0.01em] sm:text-[1.3rem]",

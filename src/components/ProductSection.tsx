@@ -1,268 +1,453 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { MessageCircle, Loader2, Eye } from "lucide-react";
-import { Product } from "@/lib/types";
-import { getWhatsAppLink } from "@/lib/store";
-import { getProductImage } from "@/lib/images";
+import { useState, type SyntheticEvent } from "react";
+import { motion, useReducedMotion, type Variants } from "framer-motion";
+import { AlertCircle, Eye, Loader2, RefreshCw } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa";
+
+import SectionHeading from "@/components/brand/SectionHeading";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { errorMessage } from "@/lib/api/client";
+import { getProductImage } from "@/lib/images";
+import { useProducts } from "@/lib/queries/products.queries";
+import {
+  buildEnquiryMessage,
+  formatNaira,
+  productOrderLink,
+  whatsappLink,
+} from "@/lib/site";
+import type { CatalogItem } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
-const categories = ["All", "Men", "Women"];
+type CategoryFilter = "All" | "Men" | "Women";
+
+const CATEGORIES: readonly CategoryFilter[] = ["All", "Men", "Women"];
+
+const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
+
+const gridVariants: Variants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.07, delayChildren: 0.04 },
+  },
+};
+
+const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 22 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, ease: EASE },
+  },
+};
+
+/** Keep category matching resilient to casing and plural forms from the API. */
+function normalizeCategory(value?: string): "Men" | "Women" | null {
+  const category = value?.trim().toLowerCase();
+  if (!category) return null;
+  if (category.startsWith("women") || category === "female") return "Women";
+  if (category.startsWith("men") || category === "male") return "Men";
+  return null;
+}
+
+function handleImageError(
+  event: SyntheticEvent<HTMLImageElement>,
+  productId: string,
+): void {
+  const image = event.currentTarget;
+  if (image.dataset.fallbackApplied === "true") return;
+  image.dataset.fallbackApplied = "true";
+  image.src = getProductImage(productId);
+}
+
+function describeProduct(product: CatalogItem): string {
+  const description = product.description?.trim();
+  if (description) return description;
+
+  const category = normalizeCategory(product.category);
+  return `A made-to-measure ${
+    category ? category.toLowerCase() : "bespoke"
+  } piece, cut and finished by hand in our Osogbo atelier.`;
+}
 
 export default function ProductSection() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [retryKey, setRetryKey] = useState(0);
-  const [activeCategory, setActiveCategory] = useState("All");
-  const [previewProduct, setPreviewProduct] = useState<Product | null>(null);
+  const [activeCategory, setActiveCategory] = useState<CategoryFilter>("All");
+  const [previewProduct, setPreviewProduct] = useState<CatalogItem | null>(null);
 
-  useEffect(() => {
-    const controller = new AbortController();
+  const {
+    data: products = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isFetching,
+  } = useProducts();
 
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        // http://localhost:4000
-        const res = await fetch("https://tailors-backend.onrender.com/products/getallproducts", {
-          signal: controller.signal,
-        });
+  const reduceMotion = useReducedMotion();
 
-        if (!res.ok) {
-          throw new Error(`Request failed with status ${res.status}`);
-        }
+  const counts: Record<CategoryFilter, number> = {
+    All: products.length,
+    Men: 0,
+    Women: 0,
+  };
 
-        const data = await res.json();
+  for (const product of products) {
+    const category = normalizeCategory(product.category);
+    if (category) counts[category] += 1;
+  }
 
-        const formatted = Array.isArray(data)
-          ? data.map((p: any) => ({
-            ...p,
-            id: p._id, // FIX: MongoDB compatibility
-          }))
-          : [];
-
-        if (!controller.signal.aborted) setProducts(formatted);
-      } catch (err) {
-        if (controller.signal.aborted) return;
-        console.log("FETCH ERROR:", err);
-        setProducts([]);
-        setError("We couldn't load the collection right now.");
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    };
-
-    fetchProducts();
-
-    return () => controller.abort();
-  }, [retryKey]);
-
-  const retryFetch = () => setRetryKey((key) => key + 1);
-
-  const filtered =
+  const visibleProducts =
     activeCategory === "All"
       ? products
-      : products.filter((p) => p.category === activeCategory);
+      : products.filter(
+          (product) => normalizeCategory(product.category) === activeCategory,
+        );
+
+  const enquiryLink = whatsappLink(
+    buildEnquiryMessage(
+      activeCategory === "All" ? undefined : `${activeCategory}'s collection`,
+    ),
+  );
 
   return (
-    <section id="products" className="py-20 bg-secondary relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-96 h-96 bg-gold/5 rounded-full blur-3xl -translate-y-1/2" />
-      <div className="absolute bottom-0 left-0 w-72 h-72 bg-gold/5 rounded-full blur-3xl translate-y-1/2" />
+    <section
+      id="collection"
+      aria-labelledby="collection-heading"
+      className="relative overflow-hidden border-t border-border/60 bg-cream py-20 sm:py-24 lg:py-32"
+    >
+      <div aria-hidden="true" className="gold-line absolute inset-x-0 top-0 h-px" />
 
-      <div className="container mx-auto px-6 relative z-10">
+      <div className="container mx-auto">
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={reduceMotion ? false : { opacity: 0, y: 22 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-6"
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.65, ease: EASE }}
+          className="grid gap-9 lg:grid-cols-12 lg:items-end lg:gap-8"
         >
-          <span className="inline-block px-4 py-1.5 rounded-full bg-gold/10 text-gold-ink text-xs uppercase tracking-[0.25em] mb-4 font-body font-medium">
-            🔥 Our Collection
-          </span>
-          <h2 className="font-display text-4xl md:text-6xl font-bold text-foreground">
-            Handcrafted <span className="italic text-gold">Designs</span>
-          </h2>
-          <p className="text-muted-foreground mt-4 max-w-lg mx-auto">
-            Each piece is a masterwork of African artistry, tailored to perfection for your unique style.
-          </p>
+          <div className="lg:col-span-7">
+            <SectionHeading
+              id="collection-heading"
+              eyebrow="The collection"
+              title={
+                <>
+                  Pieces made to be{" "}
+                  <em className="italic text-burgundy">remembered.</em>
+                </>
+              }
+              description="A considered edit of bespoke and ready-to-wear pieces, cut and finished by hand in our Osogbo atelier. Find the one, then order it directly on WhatsApp."
+            />
+          </div>
+
+          <div className="border-t border-border/70 pt-6 lg:col-span-4 lg:col-start-9 lg:border-l lg:border-t-0 lg:border-champagne/50 lg:pb-1 lg:pl-8">
+            <p className="font-display text-[1.3rem] leading-snug text-ink sm:text-[1.45rem]">
+              Every piece begins with a{" "}
+              <em className="italic text-burgundy">conversation.</em>
+            </p>
+            <p className="mt-4 max-w-sm text-[0.92rem] leading-relaxed text-muted-foreground">
+              Share the occasion, your measurements or a reference. We will guide
+              you through fabric, fit and finish — all on WhatsApp.
+            </p>
+          </div>
         </motion.div>
 
-        {/* Category filter */}
-        <div className="flex justify-center gap-3 mb-14">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => setActiveCategory(cat)}
-              aria-pressed={activeCategory === cat}
-              className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${activeCategory === cat
-                  ? "bg-foreground text-background shadow-lg"
-                  : "bg-card text-muted-foreground hover:bg-card/80 border border-border"
-                }`}
+        {!isError && (
+          <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-border/70 pt-6 sm:mt-12">
+            <div
+              role="group"
+              aria-label="Filter the collection by category"
+              className="flex flex-wrap items-center gap-2"
             >
-              {cat}
-            </button>
-          ))}
-        </div>
+              {CATEGORIES.map((category) => {
+                const isActive = activeCategory === category;
 
-        {loading ? (
-          <div
-            role="status"
-            aria-live="polite"
-            className="flex flex-col items-center justify-center py-20 gap-4"
-          >
-            <Loader2 className="animate-spin text-gold" size={44} />
-            <p className="text-muted-foreground text-sm">Loading collection...</p>
-          </div>
-        ) : error ? (
-          <div
-            role="alert"
-            className="max-w-md mx-auto text-center bg-card border border-border/50 rounded-2xl px-6 py-14 shadow-sm flex flex-col items-center gap-4"
-          >
-            <p className="text-foreground font-medium">Unable to load the collection</p>
-            <p className="text-muted-foreground text-sm">{error}</p>
-            <button
-              type="button"
-              onClick={retryFetch}
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-foreground text-background text-sm font-semibold hover:bg-gold hover:text-accent-foreground transition-all duration-300 focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none"
-            >
-              Try again
-            </button>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-20">
-            <p className="text-muted-foreground text-sm">No products in this category yet.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map((product, i) => (
-              <motion.div
-                key={product._id}
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.08, duration: 0.5 }}
-                className="group bg-card rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 border border-border/50 hover:border-gold/20"
-              >
-                <div className="aspect-[4/5] overflow-hidden relative">
-                  <img
-                    src={getProductImage(product._id, product.imageURL)}
-                    alt={product.name}
-                    loading="lazy"
-                    decoding="async"
-                    width={640}
-                    height={800}
-                    onError={(e) => {
-                      const img = e.currentTarget;
-                      img.onerror = null;
-                      img.src = getProductImage(product._id);
-                    }}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
-                  />
-
-                  {/* Overlay */}
+                return (
                   <button
+                    key={category}
                     type="button"
-                    aria-label={`Preview ${product.name}`}
-                    onClick={() => setPreviewProduct(product)}
-                    className="absolute inset-0 w-full h-full bg-foreground/0 group-hover:bg-foreground/20 group-focus-within:bg-foreground/20 transition-colors duration-500 flex items-center justify-center cursor-pointer focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none"
+                    onClick={() => setActiveCategory(category)}
+                    aria-pressed={isActive}
+                    className={cn(
+                      "inline-flex min-h-11 items-center gap-2 rounded-full border px-4 py-2 font-body text-[0.62rem] font-semibold uppercase tracking-[0.18em] transition-colors duration-300 sm:px-5",
+                      isActive
+                        ? "border-burgundy bg-burgundy text-cream"
+                        : "border-border bg-white text-ink-soft hover:border-burgundy/40 hover:text-burgundy",
+                    )}
                   >
-                    <Eye className="text-primary-foreground opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300" size={32} />
+                    {category}
+                    {!isLoading && (
+                      <span
+                        className={cn(
+                          "font-body text-[0.58rem] font-medium tracking-[0.08em]",
+                          isActive ? "text-cream/70" : "text-muted-foreground",
+                        )}
+                      >
+                        {counts[category]}
+                      </span>
+                    )}
                   </button>
+                );
+              })}
+            </div>
 
-                  {/* Category badge */}
-                  {product.category && (
-                    <span className="absolute top-4 left-4 px-3 py-1 rounded-full bg-background/90 backdrop-blur-sm text-xs uppercase tracking-wider text-foreground font-medium">
-                      {product.category}
-                    </span>
-                  )}
-                </div>
-
-                <div className="p-6">
-                  <h3 className="font-display text-xl font-semibold text-foreground mb-1.5">
-                    {product.name}
-                  </h3>
-
-                  <p className="text-muted-foreground text-sm mb-5 line-clamp-2 leading-relaxed">
-                    {product.description}
-                  </p>
-
-                  <div className="flex items-center justify-between">
-                    <span className="font-display text-2xl font-bold text-gold">
-                      ₦{Number(product.price).toLocaleString()}
-                    </span>
-
-                    <a
-                      href={getWhatsAppLink(product)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-foreground text-background text-sm font-semibold hover:bg-gold hover:text-accent-foreground transition-all duration-300 shadow-sm hover:shadow-md"
-                    // bg-[#25D366]
-                    >
-                      <MessageCircle size={16} />
-                      Order
-                    </a>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+            <p className="font-body text-[0.58rem] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+              {isLoading
+                ? "Preparing today’s edit"
+                : "Made to order · Osogbo, Osun State"}
+            </p>
           </div>
         )}
 
-        {/* Preview Modal */}
-        <Dialog open={!!previewProduct} onOpenChange={(open) => !open && setPreviewProduct(null)}>
-          <DialogContent className="max-w-3xl p-2 bg-card border-border">
-            <DialogTitle className="sr-only">
-              {previewProduct?.name ?? "Product preview"}
-            </DialogTitle>
-            <DialogDescription className="sr-only">
-              Preview of {previewProduct?.name ?? "selected product"}
-            </DialogDescription>
-
-            {previewProduct && (
-              <div className="flex flex-col">
-                <img
-                  src={getProductImage(previewProduct._id, previewProduct.imageURL)}
-                  alt={previewProduct.name}
-                  decoding="async"
-                  onError={(e) => {
-                    const img = e.currentTarget;
-                    img.onerror = null;
-                    img.src = getProductImage(previewProduct._id);
-                  }}
-                  className="w-full max-h-[75vh] object-contain rounded-lg"
-                />
-
-                <div className="p-4 flex items-center justify-between">
-                  <div>
-                    <h3 className="font-display text-xl font-semibold text-foreground">
-                      {previewProduct.name}
-                    </h3>
-                    <span className="font-display text-lg font-bold text-gold">
-                      ₦{Number(previewProduct.price).toLocaleString()}
-                    </span>
-                  </div>
-
-                  <a
-                    href={getWhatsAppLink(previewProduct)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-foreground text-background text-sm font-semibold hover:bg-gold hover:text-accent-foreground transition-all duration-300"
-                  >
-                    <MessageCircle size={16} />
-                    Order Now
-                  </a>
+        {isLoading ? (
+          <div
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+            className="mt-10 grid grid-cols-1 gap-6 sm:mt-12 sm:grid-cols-2 lg:grid-cols-3 lg:gap-7"
+          >
+            <span className="sr-only">Loading the collection</span>
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div
+                key={index}
+                aria-hidden="true"
+                className="overflow-hidden rounded-sm border border-border/70 bg-white"
+              >
+                <div className="aspect-[4/5] animate-pulse bg-cream-dark" />
+                <div className="flex flex-col gap-3 p-5 sm:p-6">
+                  <div className="h-3 w-16 animate-pulse rounded-full bg-cream-dark" />
+                  <div className="h-4 w-3/4 animate-pulse rounded-full bg-cream-dark" />
+                  <div className="h-3 w-full animate-pulse rounded-full bg-cream-dark" />
+                  <div className="h-3 w-5/6 animate-pulse rounded-full bg-cream-dark" />
+                  <div className="mt-3 h-11 w-full animate-pulse rounded-full bg-cream-dark" />
                 </div>
               </div>
-            )}
-          </DialogContent>
-        </Dialog>
+            ))}
+          </div>
+        ) : isError ? (
+          <div
+            role="alert"
+            className="mx-auto mt-10 max-w-lg rounded-sm border border-border/80 bg-white px-6 py-12 text-center sm:mt-12 sm:px-10"
+          >
+            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-burgundy-soft text-burgundy">
+              <AlertCircle aria-hidden="true" className="h-5 w-5" />
+            </span>
+            <h3 className="mt-5 font-display text-[1.7rem] leading-tight text-ink">
+              We couldn&rsquo;t load the collection
+            </h3>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              {errorMessage(error)}
+            </p>
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              disabled={isFetching}
+              aria-busy={isFetching}
+              className="btn-primary mt-7 w-full sm:w-auto"
+            >
+              {isFetching ? (
+                <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw aria-hidden="true" className="h-4 w-4" />
+              )}
+              {isFetching ? "Trying again" : "Try again"}
+            </button>
+          </div>
+        ) : visibleProducts.length === 0 ? (
+          <div className="mx-auto mt-10 max-w-2xl rounded-sm border border-border/70 bg-white px-6 py-14 text-center sm:mt-12 sm:px-10">
+            <span className="eyebrow justify-center text-gold-ink">
+              <span aria-hidden="true" className="h-px w-8 bg-champagne" />
+              In the atelier
+            </span>
+            <h3 className="mt-5 font-display text-[1.85rem] leading-tight text-ink sm:text-[2.1rem]">
+              {activeCategory === "All"
+                ? "The collection is being prepared"
+                : `The ${activeCategory.toLowerCase()}'s collection is being prepared`}
+            </h3>
+            <p className="mx-auto mt-4 max-w-md text-[0.95rem] leading-relaxed text-muted-foreground">
+              {activeCategory === "All"
+                ? "New pieces are being finished by hand in our Osogbo atelier. Message us and we will let you know as soon as they are ready."
+                : `Our ${activeCategory.toLowerCase()}'s pieces are currently being finished. Send us a message and we will share new arrivals with you first.`}
+            </p>
+            <a
+              href={enquiryLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-primary mt-7"
+            >
+              <FaWhatsapp aria-hidden="true" className="h-4 w-4 shrink-0" />
+              Enquire on WhatsApp
+            </a>
+            <p className="mt-5 font-body text-[0.6rem] uppercase tracking-[0.2em] text-muted-foreground">
+              Nationwide delivery from Osogbo, Osun State
+            </p>
+          </div>
+        ) : (
+          <motion.ul
+            variants={gridVariants}
+            initial={reduceMotion ? false : "hidden"}
+            whileInView="visible"
+            viewport={{ once: true, margin: "-60px" }}
+            className="mt-8 grid list-none grid-cols-1 gap-6 p-0 sm:mt-10 sm:grid-cols-2 lg:grid-cols-3 lg:gap-7"
+          >
+            {visibleProducts.map((product) => {
+              const categoryLabel = product.category?.trim();
+              const description = describeProduct(product);
+
+              return (
+                <motion.li
+                  key={product._id}
+                  variants={cardVariants}
+                  className="h-full"
+                >
+                  <article className="group flex h-full flex-col overflow-hidden rounded-sm border border-border/80 bg-white transition-[border-color,box-shadow] duration-500 ease-out hover:border-champagne hover:shadow-soft focus-within:border-champagne focus-within:shadow-soft">
+                    <div className="relative aspect-[4/5] overflow-hidden bg-cream-dark">
+                      <img
+                        src={getProductImage(product._id, product.imageURL)}
+                        alt={`${product.name}${
+                          categoryLabel
+                            ? ` — ${categoryLabel.toLowerCase()} piece`
+                            : ""
+                        } by Style by Zahra`}
+                        width={640}
+                        height={800}
+                        loading="lazy"
+                        decoding="async"
+                        onError={(event) => handleImageError(event, product._id)}
+                        className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04] group-focus-within:scale-[1.04]"
+                      />
+
+                      {categoryLabel && (
+                        <span className="pointer-events-none absolute left-3 top-3 z-20 rounded-sm bg-cream/90 px-2.5 py-1 font-body text-[0.55rem] font-semibold uppercase tracking-[0.22em] text-burgundy backdrop-blur-[2px]">
+                          {categoryLabel}
+                        </span>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => setPreviewProduct(product)}
+                        aria-label={`Preview ${product.name}`}
+                        className="absolute inset-0 z-10 flex items-end justify-center bg-ink/0 p-4 transition-colors duration-500 hover:bg-ink/10 focus-visible:bg-ink/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gold"
+                      >
+                        <span className="inline-flex items-center gap-2 rounded-full bg-cream/95 px-3.5 py-2 font-body text-[0.55rem] font-semibold uppercase tracking-[0.2em] text-burgundy shadow-sm transition-all duration-300 sm:translate-y-1 sm:opacity-0 sm:group-hover:translate-y-0 sm:group-hover:opacity-100 sm:group-focus-within:translate-y-0 sm:group-focus-within:opacity-100">
+                          <Eye aria-hidden="true" className="h-3.5 w-3.5" />
+                          View piece
+                        </span>
+                      </button>
+                    </div>
+
+                    <div className="flex flex-1 flex-col p-5 sm:p-6">
+                      <h3 className="break-words font-display text-[1.2rem] leading-[1.25] text-ink">
+                        {product.name}
+                      </h3>
+
+                      <p className="mt-3 line-clamp-2 text-[0.9rem] leading-relaxed text-muted-foreground">
+                        {description}
+                      </p>
+
+                      <div className="mt-auto pt-5">
+                        <div className="flex items-center justify-between gap-3 border-t border-border/70 pt-4">
+                          <span className="font-display text-[1.15rem] leading-none text-burgundy">
+                            {formatNaira(product.price)}
+                          </span>
+                          <span className="hidden font-body text-[0.55rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground sm:inline">
+                            Made to order
+                          </span>
+                        </div>
+
+                        <a
+                          href={productOrderLink(product)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`Order ${product.name} on WhatsApp`}
+                          className="btn-outline mt-4 w-full"
+                        >
+                          <FaWhatsapp
+                            aria-hidden="true"
+                            className="h-4 w-4 shrink-0"
+                          />
+                          Order on WhatsApp
+                        </a>
+                      </div>
+                    </div>
+                  </article>
+                </motion.li>
+              );
+            })}
+          </motion.ul>
+        )}
       </div>
+
+      <Dialog
+        open={previewProduct !== null}
+        onOpenChange={(open) => {
+          if (!open) setPreviewProduct(null);
+        }}
+      >
+        <DialogContent className="max-h-[92vh] w-[calc(100vw-2rem)] max-w-3xl gap-0 overflow-y-auto rounded-sm border-border/80 bg-white p-0 [&>button:last-child]:right-3 [&>button:last-child]:top-3 [&>button:last-child]:z-20 [&>button:last-child]:grid [&>button:last-child]:h-9 [&>button:last-child]:w-9 [&>button:last-child]:place-items-center [&>button:last-child]:rounded-full [&>button:last-child]:bg-cream/95 [&>button:last-child]:text-ink [&>button:last-child]:opacity-100 [&>button:last-child]:shadow-sm">
+          {previewProduct && (
+            <div className="grid md:grid-cols-[1.05fr_0.95fr]">
+              <div className="flex items-center justify-center bg-cream-dark/70 p-3 sm:p-5">
+                <img
+                  src={getProductImage(
+                    previewProduct._id,
+                    previewProduct.imageURL,
+                  )}
+                  alt={`${previewProduct.name}${
+                    previewProduct.category
+                      ? ` — ${previewProduct.category.toLowerCase()} piece`
+                      : ""
+                  } by Style by Zahra`}
+                  decoding="async"
+                  onError={(event) =>
+                    handleImageError(event, previewProduct._id)
+                  }
+                  className="max-h-[65vh] w-full rounded-sm object-contain"
+                />
+              </div>
+
+              <div className="flex flex-col border-t border-border/70 p-6 sm:p-8 md:border-l md:border-t-0">
+                <span className="eyebrow text-gold-ink">
+                  {previewProduct.category?.trim() || "Bespoke"}
+                </span>
+
+                <DialogTitle className="mt-4 break-words font-display text-[1.7rem] leading-[1.15] text-ink sm:text-[2rem]">
+                  {previewProduct.name}
+                </DialogTitle>
+
+                <p className="mt-3 font-display text-[1.35rem] text-burgundy">
+                  {formatNaira(previewProduct.price)}
+                </p>
+
+                <DialogDescription className="mt-5 text-[0.95rem] leading-relaxed text-muted-foreground">
+                  {describeProduct(previewProduct)}
+                </DialogDescription>
+
+                <div className="mt-8 border-t border-border/70 pt-6 md:mt-auto">
+                  <a
+                    href={productOrderLink(previewProduct)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-primary w-full"
+                    aria-label={`Order ${previewProduct.name} on WhatsApp`}
+                  >
+                    <FaWhatsapp
+                      aria-hidden="true"
+                      className="h-4 w-4 shrink-0"
+                    />
+                    Order on WhatsApp
+                  </a>
+                  <p className="mt-4 text-center font-body text-[0.58rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    Made to measure · Nationwide delivery
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

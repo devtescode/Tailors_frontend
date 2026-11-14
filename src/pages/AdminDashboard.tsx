@@ -1,875 +1,706 @@
-import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import { Product } from "@/lib/types";
+import { useMemo, useState } from "react";
+import {
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  Gem,
+  Loader2,
+  Package,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Search,
+  Trash2,
+  Users,
+  Wallet,
+} from "lucide-react";
+
+import AdminLayout from "@/components/admin/AdminLayout";
+import ProductFormDialog from "@/components/admin/ProductFormDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, LogOut, X, Menu, ChevronDown, Upload, Image, Check, PlusCircle } from "lucide-react";
-import Swal from "sweetalert2";
-
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
-
-const revokePreview = (url?: string | null) => {
-  if (url && url.startsWith("blob:")) {
-    URL.revokeObjectURL(url);
-  }
-};
-
-const createEmptyProduct = () => ({
-  id: crypto.randomUUID(),
-  name: "",
-  price: "",
-  description: "",
-  category: "",
-  imageURL: null as File | string | null,
-  imagePreview: null as string | null,
-});
-
-const isProductRowValid = (product: { name: string; price: string }) => {
-  const price = Number(product.price);
-  return product.name.trim() !== "" && Number.isFinite(price) && price > 0;
-};
-
-export default function AdminDashboard() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [showForm, setShowForm] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [productsLoading, setProductsLoading] = useState(true);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  // const [form, setForm] = useState({
-  //   name: "",
-  //   price: "",
-  //   description: "",
-  //   imageURL: "",
-  //   category: "",
-  // });
-  const [productsToAdd, setProductsToAdd] = useState<{
-    id: string;
-    name: string;
-    price: string;
-    description: string;
-    category: string;
-    imageURL: File | string | null;
-    imagePreview: string | null;
-  }[]>([createEmptyProduct()]);
-
-  const productsToAddRef = useRef(productsToAdd);
-
-  useEffect(() => {
-    productsToAddRef.current = productsToAdd;
-  }, [productsToAdd]);
-
-  // Revoke any remaining blob previews on unmount
-  useEffect(() => {
-    return () => {
-      productsToAddRef.current.forEach((p) => revokePreview(p.imagePreview));
-    };
-  }, []);
-
-  const navigate = useNavigate();
-  const { toast } = useToast();
-
-  const token = sessionStorage.getItem("token");
-
-  // ✅ FETCH PRODUCTS (FIXED SAFE ARRAY)
-  useEffect(() => {
-    if (!token) {
-      navigate("/admin");
-      return;
-    }
-
-    let cancelled = false;
-
-    const fetchProducts = async () => {
-      try {
-        const res = await fetch("https://tailors-backend.onrender.com/products/getallproducts", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (res.status === 401) {
-          sessionStorage.removeItem("token");
-          navigate("/admin");
-          return;
-        }
-
-        if (!res.ok) {
-          throw new Error(`Failed to fetch products (${res.status})`);
-        }
-
-        const data = await res.json();
-
-        if (!cancelled) {
-          setProducts(Array.isArray(data) ? data : []);
-        }
-      } catch (err) {
-        console.log(err);
-        if (!cancelled) {
-          toast({
-            title: "Error",
-            description: "Failed to load products. Please try again.",
-            variant: "destructive",
-          });
-        }
-      } finally {
-        if (!cancelled) {
-          setProductsLoading(false);
-        }
-      }
-    };
-
-    fetchProducts();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [navigate, token]);
-
-  // Close mobile menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMobileMenuOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const resetForm = () => {
-    setProductsToAdd((prev) => {
-      prev.forEach((p) => revokePreview(p.imagePreview));
-      return [createEmptyProduct()];
-    });
-    setEditingProduct(null);
-    setFormError(null);
-    setShowForm(false);
-  };
-
-  // Add another product form
-  const addAnotherProduct = () => {
-    setProductsToAdd((prev) => [...prev, createEmptyProduct()]);
-  };
-
-  // Remove a product form
-  const removeProductForm = (id: string) => {
-    setProductsToAdd((prev) => {
-      if (prev.length <= 1) return prev;
-
-      const target = prev.find((p) => p.id === id);
-      revokePreview(target?.imagePreview);
-
-      return prev.filter((p) => p.id !== id);
-    });
-  };
-
-  // Update a specific product form
-  const updateProductForm = (id: string, field: string, value: any) => {
-    setFormError(null);
-    setProductsToAdd((prev) => prev.map((p) => {
-      if (p.id === id) {
-        const updated = { ...p, [field]: value };
-        if (field === 'imageURL') {
-          revokePreview(p.imagePreview);
-          updated.imagePreview =
-            value instanceof File
-              ? URL.createObjectURL(value)
-              : typeof value === 'string'
-                ? value
-                : null;
-        }
-        return updated;
-      }
-      return p;
-    }));
-  };
-
-  // Validate and accept an image file for a product row
-  const handleImageChange = (id: string, file?: File | null) => {
-    if (!file) return;
-
-    if (!file.type.startsWith("image/") || file.size > MAX_IMAGE_SIZE) {
-      toast({
-        title: "Invalid image",
-        description: "Please choose an image file (PNG, JPG, etc.) smaller than 5MB.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    updateProductForm(id, "imageURL", file);
-  };
-
-  // Close the modal with Escape
-  useEffect(() => {
-    if (!showForm) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        resetForm();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [showForm]);
-
-  // Move focus into the modal when it opens
-  useEffect(() => {
-    if (!showForm) return;
-
-    const timeout = window.setTimeout(() => {
-      const modal = modalRef.current;
-      if (!modal) return;
-
-      const firstField = modal.querySelector<HTMLElement>('input, select, textarea');
-      if (firstField) {
-        firstField.focus();
-      } else {
-        modal.focus();
-      }
-    }, 0);
-
-    return () => window.clearTimeout(timeout);
-  }, [showForm]);
-
-  // ✅ SUBMIT MULTIPLE PRODUCTS
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const rows = editingProduct ? productsToAdd.slice(0, 1) : productsToAdd;
-    const touchedInvalid = rows.some(
-      (p) => (p.name.trim() !== "" || String(p.price).trim() !== "") && !isProductRowValid(p)
-    );
-    const validProducts = rows.filter(isProductRowValid);
-
-    if (touchedInvalid) {
-      setFormError("Each product needs a name and a price greater than 0.");
-      return;
-    }
-
-    if (validProducts.length === 0) {
-      setFormError("Add at least one product with a name and a price greater than 0.");
-      return;
-    }
-
-    setFormError(null);
-    setLoading(true);
-
-    try {
-      const rowsToSubmit = editingProduct ? validProducts.slice(0, 1) : validProducts;
-
-      for (const product of rowsToSubmit) {
-        const formData = new FormData();
-
-        formData.append("name", product.name);
-        formData.append("price", Number(product.price).toString());
-        formData.append("description", product.description);
-        formData.append("category", product.category);
-
-        // ONLY append file if real file exists
-        if (product.imageURL instanceof File) {
-          formData.append("image", product.imageURL);
-        }
-
-        const url = editingProduct
-          ? `https://tailors-backend.onrender.com/products/editproducts/${editingProduct._id}`
-          : `https://tailors-backend.onrender.com/products/addproducts`;
-
-        const method = editingProduct ? "PUT" : "POST";
-
-        const res = await fetch(url, {
-          method,
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          toast({
-            title: "Error",
-            description: data.message || "Failed to add product",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-
-      toast({
-        title: editingProduct ? "Product updated successfully" : `${validProducts.length} product(s) added successfully`,
-      });
-
-      const refreshed = await fetch(
-        "https://tailors-backend.onrender.com/products/getallproducts",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const newData = await refreshed.json();
-      setProducts(Array.isArray(newData) ? newData : []);
-
-      resetForm();
-    } catch (err: any) {
-      console.error("SUBMIT ERROR:", err);
-
-      toast({
-        title: "Network Error",
-        description: "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ✅ EDIT PRODUCT
-  const handleEdit = (product: Product) => {
-    setEditingProduct(product);
-    setFormError(null);
-    setProductsToAdd([{
-      id: crypto.randomUUID(),
-      name: product.name,
-      price: product.price.toString(),
-      description: product.description,
-      imageURL: product.imageURL,
-      category: product.category || "",
-      imagePreview: product.imageURL as string,
-    }]);
-    setShowForm(true);
-  };
-
-  // ✅ DELETE PRODUCT
-  const handleDelete = async (id: string) => {
-    const result = await Swal.fire({
-      title: "Are you sure?",
-      text: "You won't be able to revert this!",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Yes, delete it!",
-    });
-
-    if (!result.isConfirmed) return;
-
-    try {
-      const res = await fetch(
-        `https://tailors-backend.onrender.com/products/deleteproducts/${id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (res.status === 401) {
-        sessionStorage.removeItem("token");
-        navigate("/admin");
-        return;
-      }
-
-      if (!res.ok) {
-        toast({
-          title: "Delete failed",
-          description: "Failed to delete product. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setProducts((prev) => prev.filter((p: any) => p._id !== id));
-
-      await Swal.fire({
-        title: "Deleted!",
-        text: "Your product has been deleted.",
-        icon: "success",
-      });
-
-      toast({ title: "Product deleted" });
-    } catch (err) {
-      console.error("DELETE ERROR:", err);
-
-      toast({
-        title: "Delete failed",
-        description: "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleLogout = () => {
-    sessionStorage.removeItem("token");
-    navigate("/admin");
-  };
+import { errorMessage } from "@/lib/api/client";
+import { getFallbackImage, getProductImage } from "@/lib/images";
+import {
+  useAddProducts,
+  useDeleteProduct,
+  useEditProduct,
+  useProducts,
+} from "@/lib/queries/products.queries";
+import { formatNaira } from "@/lib/site";
+import type { CatalogItem } from "@/lib/types";
+import { cn } from "@/lib/utils";
+
+type CategoryFilter = "All" | "Men" | "Women";
+
+const PAGE_SIZE = 8;
+
+const CATEGORY_FILTERS: readonly CategoryFilter[] = ["All", "Men", "Women"];
+
+function ProductThumb({
+  product,
+  className,
+}: {
+  product: CatalogItem;
+  className?: string;
+}) {
+  return (
+    <img
+      src={getProductImage(product.id, product.imageURL)}
+      alt={product.name}
+      loading="lazy"
+      decoding="async"
+      className={className}
+      onError={(event) => {
+        const image = event.currentTarget;
+        if (image.dataset.fallback === "true") return;
+        image.dataset.fallback = "true";
+        image.src = getFallbackImage(product.id);
+      }}
+    />
+  );
+}
+
+function CategoryBadge({ category }: { category?: string }) {
+  const label = category?.trim() || "Uncategorised";
 
   return (
-    <div className="min-h-screen bg-background">
+    <span
+      className={cn(
+        "inline-flex items-center border px-2.5 py-1 font-body text-[0.56rem] font-semibold uppercase tracking-[0.14em]",
+        category === "Men" && "border-burgundy/20 bg-burgundy-soft text-burgundy",
+        category === "Women" && "border-gold/30 bg-champagne/20 text-gold-ink",
+        category !== "Men" &&
+          category !== "Women" &&
+          "border-border bg-muted text-muted-foreground",
+      )}
+    >
+      {label}
+    </span>
+  );
+}
 
+function StatSkeleton() {
+  return (
+    <div className="animate-pulse border border-border/70 bg-white p-5">
+      <div className="h-9 w-9 rounded-full bg-cream-dark" />
+      <div className="mt-4 h-3 w-20 bg-cream-dark" />
+      <div className="mt-2 h-7 w-28 bg-cream-dark" />
+    </div>
+  );
+}
 
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="font-display text-xl font-bold text-foreground">
-              Tailor<span className="text-gold">Craft</span> Dashboard
-            </h1>
-          </div>
+export default function AdminDashboard() {
+  const { toast } = useToast();
+  const productsQuery = useProducts();
+  const addMutation = useAddProducts();
+  const editMutation = useEditProduct();
+  const deleteMutation = useDeleteProduct();
 
-          {/* Desktop Menu - Hidden on small screens */}
-          <div className="hidden md:flex items-center gap-3">
-            <a href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              View Site
-            </a>
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState<CategoryFilter>("All");
+  const [page, setPage] = useState(1);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<CatalogItem | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CatalogItem | null>(null);
 
-            <a
-              href="/admin/change-password"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              🔒 Change Password
-            </a>
+  const products = useMemo(() => productsQuery.data ?? [], [productsQuery.data]);
 
-            <button
-              onClick={handleLogout}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border text-sm font-medium text-foreground hover:bg-secondary transition-colors"
-            >
-              <LogOut size={16} />
-              Logout
-            </button>
-          </div>
+  const stats = useMemo(() => {
+    const men = products.filter((product) => product.category === "Men").length;
+    const women = products.filter((product) => product.category === "Women").length;
+    const value = products.reduce((total, product) => total + product.price, 0);
 
-          {/* Mobile Menu Button - Visible only on small screens */}
-          <div className="md:hidden relative" ref={menuRef}>
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-foreground text-background text-sm font-medium hover:opacity-90 transition-all shadow-lg hover:shadow-xl"
-            >
-              <Menu size={18} />
-              Menu
-              <ChevronDown
-                size={16}
-                className={`transition-transform duration-200 ${mobileMenuOpen ? 'rotate-180' : ''}`}
-              />
-            </button>
+    return [
+      {
+        label: "Total pieces",
+        value: String(products.length),
+        hint: "Live in the collection",
+        icon: Package,
+      },
+      {
+        label: "Menswear",
+        value: String(men),
+        hint: "Pieces for men",
+        icon: Users,
+      },
+      {
+        label: "Womenswear",
+        value: String(women),
+        hint: "Pieces for women",
+        icon: Gem,
+      },
+      {
+        label: "Catalogue value",
+        value: formatNaira(value),
+        hint: "Combined listed price",
+        icon: Wallet,
+      },
+    ];
+  }, [products]);
 
-            {/* Mobile Dropdown */}
-            {mobileMenuOpen && (
-              <div className="absolute right-0 mt-3 w-56 bg-card rounded-xl shadow-2xl border border-border overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="py-2">
-                  <a
-                    href="/"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-secondary transition-colors"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                    View Site
-                  </a>
+  const filteredProducts = useMemo(() => {
+    const query = search.trim().toLowerCase();
 
-                  <a
-                    href="/admin/change-password"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-secondary transition-colors"
-                  >
-                    <span className="text-base">🔒</span>
-                    Change Password
-                  </a>
+    return products.filter((product) => {
+      const matchesCategory = category === "All" || product.category === category;
+      const matchesSearch =
+        !query ||
+        product.name.toLowerCase().includes(query) ||
+        product.description.toLowerCase().includes(query);
 
-                  <div className="border-t border-border my-1"></div>
+      return matchesCategory && matchesSearch;
+    });
+  }, [products, search, category]);
 
-                  <button
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      handleLogout();
-                    }}
-                    className="flex items-center gap-3 px-4 py-3 w-full text-sm text-red-500 hover:bg-red-50 transition-colors"
-                  >
-                    <LogOut size={16} />
-                    Logout
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
+  const pageCount = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const visibleProducts = filteredProducts.slice(
+    startIndex,
+    startIndex + PAGE_SIZE,
+  );
 
-      <main className="container mx-auto px-6 py-8">
+  const pageNumbers = useMemo(() => {
+    if (pageCount <= 5) {
+      return Array.from({ length: pageCount }, (_, index) => index + 1);
+    }
 
-        <div className="flex items-center justify-between mb-8">
-          <h2 aria-live="polite" className="font-display text-2xl font-bold text-foreground">
-            Products ({products.length})
-          </h2>
+    const start = Math.max(1, Math.min(currentPage - 2, pageCount - 4));
+    return Array.from({ length: 5 }, (_, index) => start + index);
+  }, [currentPage, pageCount]);
 
+  const openCreate = () => {
+    setEditingProduct(null);
+    setFormOpen(true);
+  };
+
+  const openEdit = (product: CatalogItem) => {
+    setEditingProduct(product);
+    setFormOpen(true);
+  };
+
+  const handleFormOpenChange = (open: boolean) => {
+    setFormOpen(open);
+  };
+
+  const handleSubmit = async (forms: FormData[]) => {
+    if (editingProduct) {
+      await editMutation.mutateAsync({ id: editingProduct._id, form: forms[0] });
+      toast({
+        title: "Piece updated",
+        description: `${editingProduct.name} is now up to date.`,
+      });
+    } else {
+      const count = await addMutation.mutateAsync(forms);
+      toast({
+        title: `${count} ${count === 1 ? "piece" : "pieces"} added`,
+        description: "The storefront collection has been refreshed.",
+      });
+    }
+
+    setFormOpen(false);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+
+    try {
+      await deleteMutation.mutateAsync(deleteTarget._id);
+      toast({
+        title: "Piece removed",
+        description: `${deleteTarget.name} is no longer in the collection.`,
+      });
+      setDeleteTarget(null);
+    } catch (error) {
+      toast({
+        title: "Could not delete piece",
+        description: errorMessage(error),
+        variant: "destructive",
+      });
+    }
+  };
+
+  const resetFilters = () => {
+    setSearch("");
+    setCategory("All");
+    setPage(1);
+  };
+
+  const isBusy =
+    productsQuery.isPending ||
+    addMutation.isPending ||
+    editMutation.isPending ||
+    deleteMutation.isPending;
+
+  return (
+    <AdminLayout
+      title="The collection"
+      description="Manage the pieces, photography and pricing shown in the Style by Zahra boutique."
+      eyebrow="Atelier dashboard"
+      actions={
+        <>
           <button
-            onClick={() => {
-              resetForm();
-              setShowForm(true);
-            }}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity"
+            type="button"
+            onClick={() => void productsQuery.refetch()}
+            disabled={productsQuery.isFetching}
+            className="inline-flex min-h-11 items-center justify-center gap-2 border border-border bg-white px-4 font-body text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-ink transition-colors hover:border-burgundy/40 hover:text-burgundy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold disabled:opacity-60"
           >
-            <Plus size={18} />
-            Add Product
+            <RefreshCw
+              aria-hidden="true"
+              className={cn("h-4 w-4", productsQuery.isFetching && "animate-spin")}
+            />
+            <span className="hidden sm:inline">Refresh</span>
           </button>
+
+          <button type="button" onClick={openCreate} className="btn-primary">
+            <Plus aria-hidden="true" className="h-4 w-4" />
+            Add products
+          </button>
+        </>
+      }
+    >
+      {/* Stats */}
+      <section aria-label="Collection statistics">
+        <ul className="grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2 xl:grid-cols-4">
+          {productsQuery.isPending
+            ? Array.from({ length: 4 }, (_, index) => (
+                <li key={index}>
+                  <StatSkeleton />
+                </li>
+              ))
+            : stats.map((stat) => (
+                <li key={stat.label}>
+                  <article className="flex h-full flex-col border border-border/70 bg-white p-5">
+                    <span
+                      aria-hidden="true"
+                      className="flex h-9 w-9 items-center justify-center rounded-full border border-champagne/70 bg-burgundy-soft text-burgundy"
+                    >
+                      <stat.icon className="h-4 w-4" />
+                    </span>
+                    <p className="mt-4 font-body text-[0.58rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                      {stat.label}
+                    </p>
+                    <p className="mt-1.5 font-display text-[1.55rem] leading-none text-ink">
+                      {stat.value}
+                    </p>
+                    <p className="mt-1.5 text-[0.7rem] text-muted-foreground">{stat.hint}</p>
+                  </article>
+                </li>
+              ))}
+        </ul>
+      </section>
+
+      {/* Collection panel */}
+      <section
+        aria-label="Product collection"
+        className="mt-6 border border-border/70 bg-white shadow-soft"
+      >
+        <div className="flex flex-col gap-3 border-b border-border/70 p-4 sm:p-5 lg:flex-row lg:items-center">
+          <div className="relative w-full lg:max-w-sm">
+            <label htmlFor="product-search" className="sr-only">
+              Search products
+            </label>
+            <Search
+              aria-hidden="true"
+              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            />
+            <input
+              id="product-search"
+              type="search"
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
+              placeholder="Search by name or description"
+              className="admin-field pl-10"
+            />
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:ml-auto">
+            <div>
+              <label htmlFor="category-filter" className="sr-only">
+                Filter by category
+              </label>
+              <select
+                id="category-filter"
+                value={category}
+                onChange={(event) => {
+                  setCategory(event.target.value as CategoryFilter);
+                  setPage(1);
+                }}
+                className="admin-field min-w-[10rem]"
+              >
+                {CATEGORY_FILTERS.map((filter) => (
+                  <option key={filter} value={filter}>
+                    {filter === "All" ? "All categories" : filter}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <p
+              aria-live="polite"
+              className="shrink-0 font-body text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+            >
+              {productsQuery.isPending
+                ? "Loading"
+                : `${filteredProducts.length} ${
+                    filteredProducts.length === 1 ? "piece" : "pieces"
+                  }`}
+            </p>
+          </div>
         </div>
 
-        {showForm && (
-          <div className="fixed inset-0 bg-foreground/90 z-50 flex items-center justify-center p-4">
-            <div
-              ref={modalRef}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="product-form-title"
-              className="bg-card rounded-xl p-0 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
+        {productsQuery.isError ? (
+          <div role="alert" className="px-6 py-16 text-center">
+            <span
+              aria-hidden="true"
+              className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-destructive/20 bg-destructive/5 text-destructive"
             >
-
-              <div className="sticky top-0 z-20 bg-card border-b border-border px-4 py-4 flex items-center justify-between">
-                <h3 id="product-form-title" className="font-display text-xl font-bold text-foreground">
-                  {editingProduct ? "Edit Product" : "Add Products"}
-                </h3>
-
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  aria-label="Close product form"
-                  className="text-muted-foreground hover:text-foreground p-2 rounded-lg hover:bg-secondary transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              <form onSubmit={handleSubmit} className="space-y-6 px-6 py-6">
-                {/* Multiple Product Forms */}
-                {productsToAdd.map((product, index) => (
-                  <div key={product.id} className="relative bg-secondary/30 rounded-xl p-5 border border-border">
-                    {/* Product Number Badge */}
-                    <div className="absolute -top-3 left-4 bg-foreground text-background px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1">
-                      <Check size={12} />
-                      Product {index + 1}
-                    </div>
-
-                    {/* Remove Button (only if more than 1 product) */}
-                    {productsToAdd.length > 1 && !editingProduct && (
-                      <button
-                        type="button"
-                        onClick={() => removeProductForm(product.id)}
-                        aria-label={`Remove product ${index + 1}`}
-                        className="absolute top-3 right-3 text-muted-foreground hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
-                      >
-                        <X size={16} />
-                      </button>
-                    )}
-
-                    <div className="grid gap-4 mt-2">
-                      {/* NAME */}
-                      <div>
-                        <label htmlFor={`name-${product.id}`} className="text-xs font-medium text-muted-foreground mb-1.5 block">Product Name</label>
-                        <input
-                          id={`name-${product.id}`}
-                          value={product.name}
-                          onChange={(e) => updateProductForm(product.id, 'name', e.target.value)}
-                          placeholder="Enter product name"
-                          className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-gold focus:border-transparent outline-none transition text-sm"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        {/* PRICE */}
-                        <div>
-                          <label htmlFor={`price-${product.id}`} className="text-xs font-medium text-muted-foreground mb-1.5 block">Price (₦)</label>
-                          <input
-                            id={`price-${product.id}`}
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={product.price}
-                            onChange={(e) => updateProductForm(product.id, 'price', e.target.value)}
-                            placeholder="0.00"
-                            className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-gold focus:border-transparent outline-none transition text-sm"
-                          />
-                        </div>
-
-                        {/* CATEGORY */}
-                        <div>
-                          <label htmlFor={`category-${product.id}`} className="text-xs font-medium text-muted-foreground mb-1.5 block">Category</label>
-                          <select
-                            id={`category-${product.id}`}
-                            value={product.category}
-                            onChange={(e) => updateProductForm(product.id, 'category', e.target.value)}
-                            className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-gold focus:border-transparent outline-none transition text-sm"
-                          >
-                            <option value="">Select</option>
-                            <option value="Men">Men</option>
-                            <option value="Women">Women</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      {/* DESCRIPTION */}
-                      <div>
-                        <label htmlFor={`description-${product.id}`} className="text-xs font-medium text-muted-foreground mb-1.5 block">Description</label>
-                        <textarea
-                          id={`description-${product.id}`}
-                          value={product.description}
-                          onChange={(e) => updateProductForm(product.id, 'description', e.target.value)}
-                          placeholder="Product description..."
-                          rows={6}
-                          className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-gold focus:border-transparent outline-none transition text-sm resize-none"
-                        />
-                      </div>
-
-                      {/* FILE UPLOAD - NEW STYLING */}
-                      <div>
-                        <span className="text-xs font-medium text-muted-foreground mb-1.5 block">Product Image</span>
-
-                        {/* Show preview if image selected */}
-                        {(product.imagePreview || (editingProduct && typeof product.imageURL === 'string')) ? (
-                          <div className="relative">
-                            <div className="flex items-center gap-4 p-3 bg-secondary/50 rounded-lg border border-border">
-                              <div className="w-16 h-16 rounded-lg overflow-hidden bg-background flex-shrink-0">
-                                <img
-                                  src={product.imagePreview ?? (typeof product.imageURL === "string" ? product.imageURL : undefined)}
-                                  alt="Preview"
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-foreground truncate">
-                                  {product.imageURL instanceof File ? product.imageURL.name : 'Current image'}
-                                </p>
-                                <p className="text-xs text-muted-foreground">Click to change</p>
-                              </div>
-                              <label
-                                htmlFor={`image-${product.id}`}
-                                aria-label={`Replace product image ${index + 1}`}
-                                className="cursor-pointer p-2 rounded-lg bg-foreground text-background hover:opacity-90 transition-opacity"
-                              >
-                                <Upload size={16} />
-                                <input
-                                  id={`image-${product.id}`}
-                                  type="file"
-                                  accept="image/*"
-                                  aria-label={`Replace product image ${index + 1}`}
-                                  onChange={(e) => handleImageChange(product.id, e.target.files?.[0])}
-                                  className="hidden"
-                                />
-                              </label>
-                            </div>
-                          </div>
-                        ) : (
-                          /* Upload Area */
-                          <label
-                            htmlFor={`image-${product.id}`}
-                            className="flex flex-col items-center justify-center w-full h-28 rounded-xl border-2 border-dashed border-border hover:border-gold hover:bg-secondary/20 transition-all cursor-pointer group"
-                          >
-                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                              <div className="w-10 h-10 rounded-full bg-secondary group-hover:bg-gold/20 flex items-center justify-center mb-2 transition-colors">
-                                <Image className="w-5 h-5 text-muted-foreground group-hover:text-gold transition-colors" />
-                              </div>
-                              <p className="text-sm text-muted-foreground">
-                                <span className="font-semibold text-gold">Click to upload</span> or drag
-                              </p>
-                              <p className="text-xs text-muted-foreground mt-1">PNG, JPG up to 5MB</p>
-                            </div>
-                            <input
-                              id={`image-${product.id}`}
-                              type="file"
-                              accept="image/*"
-                              aria-label={`Upload product image ${index + 1}`}
-                              onChange={(e) => handleImageChange(product.id, e.target.files?.[0])}
-                              className="hidden"
-                            />
-                          </label>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {/* Add Another Product Button */}
-                {!editingProduct && (
-                  <button
-                    type="button"
-                    onClick={addAnotherProduct}
-                    className="w-full py-3 rounded-xl border-2 border-dashed border-border hover:border-gold hover:bg-secondary/20 transition-all flex items-center justify-center gap-2 text-muted-foreground hover:text-foreground"
-                  >
-                    <PlusCircle size={18} />
-                    Add Another Product
-                  </button>
-                )}
-
-                {/* FORM ERROR */}
-                {formError && (
-                  <p
-                    role="alert"
-                    className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
-                  >
-                    {formError}
-                  </p>
-                )}
-
-                {/* SUBMIT BUTTON */}
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3.5 rounded-full bg-foreground text-background font-semibold hover:opacity-90 transition-all disabled:opacity-60 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                >
-                  {loading ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Adding Products...</span>
-                    </div>
-                  ) : editingProduct ? (
-                    "Update Product"
-                  ) : (
-                    `Add ${productsToAdd.filter(p => p.name.trim()).length || 1} Product(s)`
-                  )}
-                </button>
-
-              </form>
-            </div>
+              <AlertCircle className="h-6 w-6" />
+            </span>
+            <h2 className="mt-4 font-display text-xl text-ink">
+              We could not load the collection
+            </h2>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+              {errorMessage(productsQuery.error)}
+            </p>
+            <button
+              type="button"
+              onClick={() => void productsQuery.refetch()}
+              className="btn-outline mt-6"
+            >
+              <RefreshCw aria-hidden="true" className="h-4 w-4" />
+              Try again
+            </button>
           </div>
-        )}
-        <div className="bg-card rounded-xl shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-
-            {/* Loading State */}
-            {productsLoading && (
-              <div role="status" className="flex flex-col items-center justify-center py-20">
-                <div className="relative" aria-hidden="true">
-                  <div className="w-16 h-16 border-4 border-gold/20 rounded-full"></div>
-                  <div className="absolute top-0 left-0 w-16 h-16 border-4 border-gold border-t-transparent rounded-full animate-spin"></div>
+        ) : productsQuery.isPending ? (
+          <div className="space-y-3 p-4 sm:p-5" aria-hidden="true">
+            {Array.from({ length: 5 }, (_, index) => (
+              <div
+                key={index}
+                className="flex animate-pulse items-center gap-4 border border-border/60 p-3"
+              >
+                <div className="h-16 w-14 shrink-0 bg-cream-dark" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3.5 w-1/3 bg-cream-dark" />
+                  <div className="h-2.5 w-2/3 bg-cream-dark" />
                 </div>
-                <p aria-hidden="true" className="mt-4 text-muted-foreground font-medium">Loading products...</p>
-                <span className="sr-only">Loading products...</span>
+                <div className="hidden h-3 w-16 bg-cream-dark sm:block" />
               </div>
-            )}
-
-            {/* Empty State */}
-            {!productsLoading && products.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-20">
-                <div className="w-24 h-24 bg-secondary rounded-full flex items-center justify-center mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold text-foreground mb-2">No Products Yet</h3>
-                <p className="text-muted-foreground mb-6 text-center max-w-md">
-                  You haven't added any products to your inventory yet. Click the button below to add your first product.
-                </p>
-                <button
-                  onClick={() => {
-                    resetForm();
-                    setShowForm(true);
-                  }}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity"
-                >
-                  <Plus size={18} />
-                  Add Your First Product
-                </button>
-              </div>
-            )}
-
-            {/* Products Table */}
-            {!productsLoading && products.length > 0 && (
-              <table className="w-full">
-
+            ))}
+            <span className="sr-only" role="status">
+              Loading products…
+            </span>
+          </div>
+        ) : products.length === 0 ? (
+          <div className="px-6 py-16 text-center">
+            <span
+              aria-hidden="true"
+              className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-champagne/70 bg-burgundy-soft text-burgundy"
+            >
+              <Package className="h-7 w-7" />
+            </span>
+            <h2 className="mt-5 font-display text-2xl text-ink">
+              The collection is waiting
+            </h2>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+              Add your first piece to begin building the Style by Zahra storefront.
+              You can upload several products in one go.
+            </p>
+            <button type="button" onClick={openCreate} className="btn-primary mt-6">
+              <Plus aria-hidden="true" className="h-4 w-4" />
+              Add your first piece
+            </button>
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="px-6 py-16 text-center">
+            <span
+              aria-hidden="true"
+              className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-border bg-cream text-muted-foreground"
+            >
+              <Search className="h-6 w-6" />
+            </span>
+            <h2 className="mt-4 font-display text-xl text-ink">No pieces match</h2>
+            <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
+              Try a different search term or category to find the piece you are looking
+              for.
+            </p>
+            <button type="button" onClick={resetFilters} className="btn-outline mt-6">
+              Clear filters
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Desktop table */}
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[720px] border-collapse">
+                <caption className="sr-only">
+                  Products in the Style by Zahra collection
+                </caption>
                 <thead>
-                  <tr className="border-b border-border">
-                    <th scope="col" className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Image</th>
-                    <th scope="col" className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Name</th>
-                    <th scope="col" className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Category</th>
-                    <th scope="col" className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Price</th>
-                    <th scope="col" className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">Actions</th>
+                  <tr className="border-b border-border/70 bg-cream/60">
+                    <th
+                      scope="col"
+                      className="px-5 py-3.5 text-left font-body text-[0.58rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+                    >
+                      Piece
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-5 py-3.5 text-left font-body text-[0.58rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+                    >
+                      Category
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-5 py-3.5 text-left font-body text-[0.58rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+                    >
+                      Price
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-5 py-3.5 text-right font-body text-[0.58rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+                    >
+                      Actions
+                    </th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {products.map((product: any) => (
+                  {visibleProducts.map((product) => (
                     <tr
-                      key={product._id}
-                      className="border-b border-border last:border-0 hover:bg-secondary/50 transition"
+                      key={product.id}
+                      className="border-b border-border/60 transition-colors last:border-0 hover:bg-cream/50"
                     >
-
-                      {/* IMAGE */}
-                      <td className="px-6 py-4">
-                        <img
-                          src={product.imageURL}
-                          alt={product.name}
-                          className="w-14 h-14 rounded-lg object-cover"
-                        />
-                      </td>
-
-                      {/* NAME */}
-                      <td className="px-6 py-4 font-medium text-foreground">
-                        {product.name}
-                      </td>
-
-                      {/* CATEGORY */}
-                      {/* <td className="px-6 py-4 text-muted-foreground text-sm">
-                        {product.category || "—"}
-                      </td> */}
-                      <td className="px-6 py-4 text-muted-foreground text-sm">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${product.category === "Men"
-                            ? "bg-blue-100 text-blue-700"
-                            : product.category === "Women"
-                              ? "bg-pink-100 text-pink-700"
-                              : "bg-gray-100 text-gray-600"
-                            }`}
-                        >
-                          {product.category || "—"}
-                        </span>
-                      </td>
-                      {/* PRICE */}
-                      <td className="px-6 py-4 font-semibold text-gold-ink">
-                        ₦{Number(product.price).toLocaleString()}
-                      </td>
-
-                      {/* ACTIONS */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-3">
-
-                          <button
-                            onClick={() => handleEdit(product)}
-                            aria-label={`Edit ${product.name}`}
-                            className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground"
-                          >
-                            <Pencil size={16} />
-                          </button>
-
-                          <button
-                            onClick={() => handleDelete(product._id)}
-                            aria-label={`Delete ${product.name}`}
-                            className="p-2 rounded-lg hover:bg-red-100 text-muted-foreground hover:text-red-500"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3.5">
+                          <ProductThumb
+                            product={product}
+                            className="h-16 w-14 shrink-0 border border-border/70 object-cover"
+                          />
+                          <div className="min-w-0">
+                            <p className="truncate font-display text-[1rem] leading-tight text-ink">
+                              {product.name}
+                            </p>
+                            <p className="mt-1 line-clamp-1 max-w-xs text-[0.76rem] text-muted-foreground">
+                              {product.description || "No description yet"}
+                            </p>
+                          </div>
                         </div>
                       </td>
 
+                      <td className="px-5 py-4">
+                        <CategoryBadge category={product.category} />
+                      </td>
+
+                      <td className="whitespace-nowrap px-5 py-4 font-display text-[0.98rem] text-burgundy">
+                        {formatNaira(product.price)}
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => openEdit(product)}
+                            aria-label={`Edit ${product.name}`}
+                            className="inline-flex h-9 w-9 items-center justify-center border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-white hover:text-burgundy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+                          >
+                            <Pencil aria-hidden="true" className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteTarget(product)}
+                            aria-label={`Delete ${product.name}`}
+                            className="inline-flex h-9 w-9 items-center justify-center border border-transparent text-muted-foreground transition-colors hover:border-destructive/20 hover:bg-destructive/5 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
+                          >
+                            <Trash2 aria-hidden="true" className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
-
               </table>
-            )}
-          </div>
-        </div>
+            </div>
 
-      </main>
-    </div>
+            {/* Mobile cards */}
+            <ul className="list-none divide-y divide-border/60 p-0 md:hidden">
+              {visibleProducts.map((product) => (
+                <li key={product.id} className="p-4">
+                  <div className="flex gap-3.5">
+                    <ProductThumb
+                      product={product}
+                      className="h-24 w-20 shrink-0 border border-border/70 object-cover"
+                    />
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <h2 className="min-w-0 font-display text-[1.05rem] leading-tight text-ink">
+                          {product.name}
+                        </h2>
+                        <p className="shrink-0 font-display text-[0.92rem] text-burgundy">
+                          {formatNaira(product.price)}
+                        </p>
+                      </div>
+
+                      <div className="mt-2">
+                        <CategoryBadge category={product.category} />
+                      </div>
+
+                      <p className="mt-2 line-clamp-2 text-[0.76rem] leading-relaxed text-muted-foreground">
+                        {product.description || "No description yet"}
+                      </p>
+
+                      <div className="mt-3 flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openEdit(product)}
+                          className="inline-flex min-h-9 items-center gap-1.5 border border-border bg-white px-3 text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-ink transition-colors hover:border-burgundy/40 hover:text-burgundy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+                        >
+                          <Pencil aria-hidden="true" className="h-3.5 w-3.5" />
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTarget(product)}
+                          className="inline-flex min-h-9 items-center gap-1.5 border border-border bg-white px-3 text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-destructive/30 hover:bg-destructive/5 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
+                        >
+                          <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            {/* Pagination */}
+            <div className="flex flex-col gap-3 border-t border-border/70 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+              <p className="text-center font-body text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground sm:text-left">
+                Showing {startIndex + 1}–
+                {Math.min(startIndex + PAGE_SIZE, filteredProducts.length)} of{" "}
+                {filteredProducts.length}
+              </p>
+
+              <nav aria-label="Pagination" className="flex items-center justify-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  aria-label="Previous page"
+                  className="inline-flex h-9 w-9 items-center justify-center border border-border bg-white text-ink transition-colors hover:border-burgundy/40 hover:text-burgundy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeft aria-hidden="true" className="h-4 w-4" />
+                </button>
+
+                {pageNumbers.map((pageNumber) => (
+                  <button
+                    key={pageNumber}
+                    type="button"
+                    onClick={() => setPage(pageNumber)}
+                    aria-label={`Page ${pageNumber}`}
+                    aria-current={pageNumber === currentPage ? "page" : undefined}
+                    className={cn(
+                      "inline-flex h-9 min-w-9 items-center justify-center border px-2 font-body text-[0.68rem] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold",
+                      pageNumber === currentPage
+                        ? "border-burgundy bg-burgundy text-cream"
+                        : "border-border bg-white text-ink hover:border-burgundy/40 hover:text-burgundy",
+                    )}
+                  >
+                    {pageNumber}
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => setPage(Math.min(pageCount, currentPage + 1))}
+                  disabled={currentPage === pageCount}
+                  aria-label="Next page"
+                  className="inline-flex h-9 w-9 items-center justify-center border border-border bg-white text-ink transition-colors hover:border-burgundy/40 hover:text-burgundy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronRight aria-hidden="true" className="h-4 w-4" />
+                </button>
+              </nav>
+            </div>
+          </>
+        )}
+      </section>
+
+      <p className="mt-4 text-[0.66rem] leading-relaxed text-muted-foreground">
+        {isBusy
+          ? "Finishing your changes…"
+          : "Products are ordered on WhatsApp. No card details are collected in this dashboard."}
+      </p>
+
+      <ProductFormDialog
+        open={formOpen}
+        mode={editingProduct ? "edit" : "create"}
+        product={editingProduct}
+        submitting={addMutation.isPending || editMutation.isPending}
+        onOpenChange={handleFormOpenChange}
+        onSubmit={handleSubmit}
+      />
+
+      <AlertDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent className="border-border bg-white sm:rounded-none">
+          <AlertDialogHeader>
+            <span
+              aria-hidden="true"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-destructive/20 bg-destructive/5 text-destructive"
+            >
+              <Trash2 className="h-5 w-5" />
+            </span>
+            <AlertDialogTitle className="font-display text-2xl text-ink">
+              Remove this piece?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm leading-relaxed text-muted-foreground">
+              {deleteTarget
+                ? `“${deleteTarget.name}” will be removed from the storefront. This cannot be undone.`
+                : "This piece will be removed from the storefront."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={deleteMutation.isPending}
+              className="border-border bg-white text-ink hover:bg-cream"
+            >
+              Keep piece
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteMutation.isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                void handleConfirmDelete();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending && (
+                <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Remove piece
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </AdminLayout>
   );
 }

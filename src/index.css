@@ -1,91 +1,89 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* Style by Zahra — warm cream, deep burgundy, champagne gold */
-    --background: 27 100% 98%;
-    --foreground: 300 14% 12%;
+    /* Style by Zahra — burgundy, cream and gold */
+    --background: 30 100% 97%; /* #FFF7EF */
+    --foreground: 345 19% 12%; /* #25191C */
 
-    --card: 0 0% 100%;
-    --card-foreground: 300 14% 12%;
+    --card: 0 0% 100%; /* #FFFFFF */
+    --card-foreground: 345 19% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 300 14% 12%;
+    --popover-foreground: 345 19% 12%;
 
-    --primary: 316 68% 23%;
-    --primary-foreground: 27 100% 98%;
+    --primary: 342 80% 25%; /* #720D2C */
+    --primary-foreground: 30 100% 97%;
 
-    --secondary: 337 30% 88%;
-    --secondary-foreground: 316 45% 20%;
+    --secondary: 342 35% 93%;
+    --secondary-foreground: 342 60% 22%;
 
-    --muted: 30 38% 95%;
-    --muted-foreground: 300 8% 39%;
+    --muted: 30 40% 95%;
+    --muted-foreground: 345 8% 34%;
 
-    --accent: 39 55% 66%;
-    --accent-foreground: 300 14% 12%;
+    --accent: 37 59% 48%; /* #C18A32 */
+    --accent-foreground: 345 19% 12%;
 
-    --destructive: 0 68% 44%;
+    --destructive: 0 68% 42%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 30 25% 88%;
-    --input: 30 25% 86%;
-    --ring: 316 68% 23%;
+    --border: 30 28% 86%;
+    --input: 30 28% 84%;
+    --ring: 342 80% 25%;
 
-    --radius: 0.25rem;
+    --radius: 0.125rem;
 
-    --burgundy: 316 68% 23%;
-    --burgundy-deep: 316 62% 16%;
-    --burgundy-soft: 316 35% 94%;
-    --champagne: 39 55% 66%;
-    --champagne-light: 39 60% 82%;
-    --gold-ink: 38 47% 34%;
-    --gold: 39 55% 66%;
-    --gold-light: 39 60% 82%;
-    --cream: 27 100% 98%;
-    --cream-dark: 30 40% 94%;
-    --rose: 337 30% 88%;
-    --rose-light: 340 40% 96%;
-    --ink: 300 14% 12%;
-    --ink-soft: 300 8% 35%;
-    --charcoal: 300 14% 12%;
-    --charcoal-light: 300 8% 35%;
+    --burgundy: 342 80% 25%;
+    --burgundy-deep: 345 79% 15%;
+    --burgundy-soft: 342 45% 94%;
+    --champagne: 38 61% 72%;
+    --champagne-light: 40 70% 84%;
+    --gold: 37 59% 48%;
+    --gold-light: 40 65% 74%;
+    --gold-ink: 37 65% 32%;
+    --cream: 30 100% 97%;
+    --cream-dark: 30 45% 94%;
+    --rose: 342 35% 90%;
+    --rose-light: 342 45% 96%;
+    --ink: 345 19% 12%;
+    --ink-soft: 345 8% 34%;
+    --charcoal: 345 19% 12%;
+    --charcoal-light: 345 8% 34%;
 
-    --sidebar-background: 27 100% 98%;
-    --sidebar-foreground: 300 14% 12%;
-    --sidebar-primary: 316 68% 23%;
-    --sidebar-primary-foreground: 27 100% 98%;
-    --sidebar-accent: 340 40% 96%;
-    --sidebar-accent-foreground: 316 45% 20%;
-    --sidebar-border: 30 25% 88%;
-    --sidebar-ring: 39 55% 66%;
+    --sidebar-background: 30 100% 97%;
+    --sidebar-foreground: 345 19% 12%;
+    --sidebar-primary: 342 80% 25%;
+    --sidebar-primary-foreground: 30 100% 97%;
+    --sidebar-accent: 342 45% 96%;
+    --sidebar-accent-foreground: 342 60% 22%;
+    --sidebar-border: 30 28% 86%;
+    --sidebar-ring: 37 59% 48%;
   }
 
   .dark {
-    --background: 316 30% 8%;
-    --foreground: 27 100% 97%;
-    --card: 316 26% 11%;
-    --card-foreground: 27 100% 97%;
-    --popover: 316 26% 11%;
-    --popover-foreground: 27 100% 97%;
-    --primary: 39 55% 66%;
-    --primary-foreground: 316 62% 16%;
-    --secondary: 316 22% 17%;
-    --secondary-foreground: 27 100% 97%;
-    --muted: 316 20% 16%;
+    --background: 345 30% 8%;
+    --foreground: 30 100% 97%;
+    --card: 345 26% 11%;
+    --card-foreground: 30 100% 97%;
+    --popover: 345 26% 11%;
+    --popover-foreground: 30 100% 97%;
+    --primary: 37 59% 48%;
+    --primary-foreground: 345 79% 15%;
+    --secondary: 345 22% 17%;
+    --secondary-foreground: 30 100% 97%;
+    --muted: 345 20% 16%;
     --muted-foreground: 30 18% 72%;
-    --accent: 39 55% 66%;
-    --accent-foreground: 316 62% 16%;
+    --accent: 37 59% 48%;
+    --accent-foreground: 345 79% 15%;
     --destructive: 0 62.8% 40%;
     --destructive-foreground: 0 0% 100%;
-    --border: 316 18% 20%;
-    --input: 316 18% 20%;
-    --ring: 39 55% 66%;
+    --border: 345 18% 20%;
+    --input: 345 18% 20%;
+    --ring: 37 59% 48%;
     --gold-ink: 39 60% 72%;
-    --burgundy-soft: 316 22% 17%;
+    --burgundy-soft: 345 22% 17%;
   }
 }
 
@@ -96,7 +94,7 @@
 
   html {
     scroll-behavior: smooth;
-    scroll-padding-top: 6.5rem;
+    scroll-padding-top: 7rem;
     -webkit-text-size-adjust: 100%;
   }
 
@@ -148,7 +146,7 @@
 
   :focus-visible {
     outline: none;
-    @apply ring-2 ring-champagne ring-offset-2 ring-offset-background;
+    @apply ring-2 ring-gold ring-offset-2 ring-offset-background;
   }
 
   img,
@@ -162,11 +160,11 @@
 
 @layer components {
   .eyebrow {
-    @apply inline-flex items-center gap-3 font-body text-[0.66rem] font-medium uppercase tracking-[0.32em] text-gold-ink sm:text-[0.7rem];
+    @apply inline-flex items-center gap-3 font-body text-[0.62rem] font-semibold uppercase tracking-[0.3em] text-gold-ink sm:text-[0.68rem];
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2.5 rounded-full px-7 py-3.5 text-center font-body text-[0.72rem] font-semibold uppercase tracking-[0.18em] transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-champagne focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-60 sm:text-[0.76rem];
+    @apply inline-flex min-h-11 items-center justify-center gap-2.5 rounded-full px-6 py-3 text-center font-body text-[0.68rem] font-semibold uppercase tracking-[0.16em] transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-60 sm:px-7 sm:text-[0.72rem];
   }
 
   .btn-primary {
@@ -174,7 +172,7 @@
   }
 
   .btn-champagne {
-    @apply btn bg-champagne text-ink shadow-[0_16px_36px_-22px_hsl(var(--gold-ink)/0.7)] hover:-translate-y-0.5 hover:bg-champagne-light;
+    @apply btn bg-gold text-ink shadow-[0_16px_36px_-22px_hsl(var(--gold-ink)/0.7)] hover:-translate-y-0.5 hover:bg-gold-light;
   }
 
   .btn-outline {
@@ -186,7 +184,7 @@
   }
 
   .btn-quiet {
-    @apply inline-flex items-center gap-2 font-body text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-burgundy transition-colors duration-300 hover:text-gold-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-champagne focus-visible:ring-offset-2;
+    @apply inline-flex min-h-11 items-center gap-2 font-body text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-burgundy transition-colors duration-300 hover:text-gold-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2;
   }
 
   .field {
@@ -194,7 +192,7 @@
   }
 
   .admin-field {
-    @apply w-full rounded-sm border border-border bg-background px-4 py-3 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-burgundy focus:ring-2 focus:ring-champagne/40;
+    @apply w-full rounded-sm border border-border bg-white px-4 py-3 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-burgundy focus:ring-2 focus:ring-gold/40;
   }
 
   .surface {
@@ -207,7 +205,7 @@
 
   .text-gradient-gold {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(100deg, hsl(var(--gold-ink)), hsl(var(--champagne)));
+    background-image: linear-gradient(100deg, hsl(var(--gold-ink)), hsl(var(--gold)));
   }
 }
 

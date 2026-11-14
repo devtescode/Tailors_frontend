@@ -4,7 +4,7 @@ import product3 from "@/assets/product-3.jpg";
 import product4 from "@/assets/product-4.jpg";
 import product5 from "@/assets/product-5.jpg";
 import product6 from "@/assets/product-6.jpg";
-import { API_URL } from "./api";
+import { API_URL } from "./api/client";
 
 /** Locally bundled editorial placeholders. Replace these files to update the samples. */
 export const editorialImages = [product1, product2, product3, product4, product5, product6];

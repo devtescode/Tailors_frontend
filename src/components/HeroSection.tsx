@@ -1,122 +1,160 @@
-import { motion } from "framer-motion";
-import heroBg from "@/assets/hero-bg.jpg";
+import { motion, useReducedMotion } from "framer-motion";
+import { ArrowUpRight, Sparkles } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa";
+
+import heroImage from "@/assets/hero-bg.jpg";
+import { GENERAL_WHATSAPP_LINK, site } from "@/lib/site";
+
+const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
+
+const stats = [
+  { value: "200+", label: "Happy clients" },
+  { value: "5+", label: "Years of craft" },
+  { value: "500+", label: "Designs created" },
+] as const;
 
 export default function HeroSection() {
+  const reduceMotion = useReducedMotion();
+
   return (
-    <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Background with parallax feel */}
-      <div className="absolute inset-0">
-        <img
-          src={heroBg}
-          alt="Bespoke tailor at work in a heritage atelier"
-          className="w-full h-full object-cover scale-110"
-          width={1920}
-          height={1080}
-          loading="eager"
-          fetchPriority="high"
-          decoding="async"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-foreground/70 via-foreground/60 to-foreground/80" />
-      </div>
+    <section
+      id="home"
+      aria-labelledby="hero-heading"
+      className="relative overflow-hidden bg-cream"
+    >
+      <div aria-hidden="true" className="gold-line absolute inset-x-0 top-0 z-10 h-px" />
 
-      {/* Decorative elements */}
-      <div aria-hidden="true" className="absolute top-20 left-10 w-72 h-72 bg-gold/10 rounded-full blur-3xl" />
-      <div aria-hidden="true" className="absolute bottom-20 right-10 w-96 h-96 bg-gold/5 rounded-full blur-3xl" />
-
-      {/* Content */}
-      <div className="relative z-10 text-center px-6 max-w-4xl mx-auto">
-        {/* <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.1, duration: 0.5 }}
-          className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-gold/30 bg-gold/10 backdrop-blur-sm mb-8"
-        >
-          <Sparkles className="text-gold" size={16} />
-          <span className="text-gold-light font-body text-sm uppercase tracking-[0.2em]">
-            Premium Bespoke Tailoring
-          </span>
-          <Sparkles className="text-gold" size={16} />
-        </motion.div> */}
-
-        <motion.h1
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.7 }}
-          className="font-display text-5xl sm:text-6xl md:text-8xl font-bold text-primary-foreground leading-[1.1] mt-14"
-        >
-          Elegance,{" "}
-          <span className="relative inline-block">
-            <span className="italic text-gradient-gold">Stitched</span>
-            <motion.span
-              initial={{ width: 0 }}
-              animate={{ width: "100%" }}
-              transition={{ delay: 1, duration: 0.8 }}
-              className="absolute -bottom-2 left-0 h-[3px] bg-gradient-to-r from-gold to-gold-light"
-            />
-          </span>
-          <br />
-          to Perfection
-        </motion.h1>
-
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="text-primary-foreground/70 text-lg md:text-xl mb-12 font-body max-w-2xl mx-auto leading-relaxed"
-        >
-          Handcrafted designs that celebrate African heritage with modern sophistication.
-          Every stitch tells a story of excellence.
-        </motion.p>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
-          className="flex flex-col sm:flex-row gap-5 justify-center"
-        >
-          <a
-            href="#products"
-            className="group inline-flex items-center justify-center gap-2 px-10 py-4 rounded-full bg-gradient-to-r from-gold to-gold-light text-accent-foreground font-bold text-lg shadow-lg shadow-gold/25 hover:shadow-xl hover:shadow-gold/40 hover:-translate-y-0.5 transition-all duration-300"
+      <div className="container mx-auto">
+        <div className="grid items-stretch gap-10 py-12 sm:py-16 lg:grid-cols-12 lg:gap-12 lg:py-20">
+          {/* Copy */}
+          <motion.div
+            initial={reduceMotion ? false : { opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: EASE }}
+            className="flex flex-col justify-center lg:col-span-6 lg:py-8"
           >
-            ✨ Explore Collection
-          </a>
-          <a
-            href="#contact"
-            className="inline-flex items-center justify-center px-10 py-4 rounded-full border-2 border-primary-foreground/20 text-primary-foreground font-semibold text-lg hover:bg-primary-foreground/10 hover:border-primary-foreground/40 transition-all duration-300"
-          >
-            Get in Touch
-          </a>
-        </motion.div>
+            <p className="eyebrow">
+              <span aria-hidden="true" className="h-px w-8 bg-gold" />
+              Bespoke fashion · Osogbo
+            </p>
 
-        {/* Stats */}
-        <motion.dl
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.2 }}
-          className="mt-16 flex justify-center gap-12 md:gap-20"
-        >
-          {[
-            { value: "200+", label: "Happy Clients" },
-            { value: "5+", label: "Years Experience" },
-            { value: "500+", label: "Designs Created" },
-          ].map((stat) => (
-            <div key={stat.label} className="text-center flex flex-col-reverse">
-              <dt className="text-primary-foreground/50 text-xs md:text-sm mt-1">{stat.label}</dt>
-              <dd className="font-display text-2xl md:text-3xl font-bold text-gold">{stat.value}</dd>
+            <h1
+              id="hero-heading"
+              className="mt-6 max-w-xl font-display text-[2.5rem] leading-[1.02] tracking-[-0.03em] text-ink sm:text-[3.3rem] lg:text-[3.7rem] xl:text-[4.2rem]"
+            >
+              Style by Zahra.
+              <span className="mt-1 block">
+                Dress with{" "}
+                <em className="italic text-burgundy">Confidence.</em>
+              </span>
+            </h1>
+
+            <p className="mt-6 max-w-lg text-[0.98rem] leading-relaxed text-muted-foreground sm:text-base">
+              {site.supporting}
+            </p>
+
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <a href="#collection" className="btn-primary w-full sm:w-auto">
+                Explore collection
+                <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+              </a>
+
+              <a
+                href={GENERAL_WHATSAPP_LINK}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-outline w-full sm:w-auto"
+              >
+                <FaWhatsapp aria-hidden="true" className="h-4 w-4" />
+                Chat on WhatsApp
+              </a>
             </div>
-          ))}
-        </motion.dl>
-      </div>
 
-      {/* Scroll indicator */}
-      {/* <motion.div
-        animate={{ y: [0, 12, 0] }}
-        transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
-        className=" absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
-      >
-        <span className=" text-primary-foreground/40 text-xs uppercase tracking-widest">Scroll</span>
-        <ArrowDown className="text-primary-foreground/40" size={20} />
-      </motion.div> */}
+            <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5 text-gold-ink">
+                <Sparkles aria-hidden="true" className="h-3.5 w-3.5" />
+                Made to measure
+              </span>
+              <span aria-hidden="true" className="text-border">
+                /
+              </span>
+              <span>{site.whatsapp.display}</span>
+            </p>
+
+            <dl className="mt-10 grid max-w-lg grid-cols-3 gap-3 border-t border-border/80 pt-6 sm:gap-5">
+              {stats.map((stat, index) => (
+                <motion.div
+                  key={stat.label}
+                  initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, ease: EASE, delay: 0.35 + index * 0.08 }}
+                  className="flex flex-col-reverse"
+                >
+                  <dt className="mt-1 text-[0.58rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground sm:text-[0.64rem]">
+                    {stat.label}
+                  </dt>
+                  <dd className="font-display text-[1.6rem] leading-none text-burgundy sm:text-3xl">
+                    {stat.value}
+                  </dd>
+                </motion.div>
+              ))}
+            </dl>
+          </motion.div>
+
+          {/* Editorial image */}
+          <motion.div
+            initial={reduceMotion ? false : { opacity: 0, x: 28 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, ease: EASE, delay: 0.1 }}
+            className="relative lg:col-span-6"
+          >
+            <div
+              aria-hidden="true"
+              className="absolute -right-3 top-5 hidden h-full w-full border border-gold/50 lg:block"
+            />
+
+            <div className="relative overflow-hidden border border-border bg-cream-dark">
+              <img
+                src={heroImage}
+                alt="Editorial portrait of a Style by Zahra bespoke outfit in the Osogbo atelier"
+                width={1200}
+                height={1500}
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
+                className="aspect-[4/5] h-full w-full object-cover sm:aspect-[5/5] lg:aspect-[4/5]"
+              />
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 bg-gradient-to-t from-burgundy-deep/45 via-transparent to-transparent"
+              />
+
+              <div className="absolute inset-x-4 bottom-4 flex items-end justify-between gap-3 sm:inset-x-6 sm:bottom-6">
+                <div className="border-l-2 border-gold bg-cream/95 px-3 py-2.5 backdrop-blur-sm sm:px-4 sm:py-3">
+                  <p className="font-body text-[0.54rem] font-semibold uppercase tracking-[0.24em] text-gold-ink">
+                    The atelier
+                  </p>
+                  <p className="mt-1 font-display text-[1.05rem] leading-tight text-ink sm:text-[1.2rem]">
+                    Made for your moment
+                  </p>
+                </div>
+
+                <span className="hidden border border-cream/30 bg-burgundy/80 px-3 py-2 font-body text-[0.54rem] font-semibold uppercase tracking-[0.2em] text-cream backdrop-blur-sm sm:inline-block">
+                  Osogbo, Osun State
+                </span>
+              </div>
+            </div>
+
+            <div
+              aria-hidden="true"
+              className="absolute -bottom-4 left-6 hidden h-16 w-16 border border-gold/60 bg-cream sm:block"
+            />
+            <span className="absolute -bottom-7 left-[2.35rem] hidden font-script text-3xl text-burgundy sm:block">
+              Zahra
+            </span>
+          </motion.div>
+        </div>
+      </div>
     </section>
   );
 }

@@ -1,13 +1,15 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "style-by-zahra",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Premium bespoke fashion storefront and atelier dashboard for Style by Zahra.",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"

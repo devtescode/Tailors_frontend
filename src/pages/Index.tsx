@@ -9,7 +9,6 @@ import HowItWorks from "@/components/HowItWorks";
 import AboutSection from "@/components/AboutSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import ContactSection from "@/components/ContactSection";
-import Services from "@/sections/Services";
 
 function useScrollToHash() {
   const { hash } = useLocation();
@@ -17,10 +16,14 @@ function useScrollToHash() {
   useEffect(() => {
     if (!hash) return;
     const target = document.getElementById(hash.replace("#", ""));
-    if (target) {
-      const timer = window.setTimeout(() => target.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
-      return () => window.clearTimeout(timer);
-    }
+    if (!target) return;
+
+    const timer = window.setTimeout(
+      () => target.scrollIntoView({ behavior: "smooth", block: "start" }),
+      40,
+    );
+
+    return () => window.clearTimeout(timer);
   }, [hash]);
 }
 
@@ -40,7 +43,6 @@ export default function Index() {
 
       <main id="main">
         <HeroSection />
-        <Services />
         <ProductSection />
         <WhyChooseUs />
         <HowItWorks />

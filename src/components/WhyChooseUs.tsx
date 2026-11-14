@@ -1,95 +1,122 @@
-import { motion } from "framer-motion";
-import { Shield, Clock, Sparkles, ThumbsUp, Truck, HeadphonesIcon } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import {
+  Gem,
+  Headphones,
+  Ruler,
+  Scissors,
+  Sparkles,
+  Truck,
+} from "lucide-react";
+
+import SectionHeading from "@/components/brand/SectionHeading";
 
 const reasons = [
   {
     icon: Sparkles,
     title: "Bespoke Designs",
-    description: "Every piece is uniquely crafted to match your style, body, and personality — no two outfits are the same.",
-    emoji: "✨",
+    description:
+      "Every piece begins with you. We design around your occasion, your style and the way you want to feel.",
   },
   {
-    icon: Shield,
+    icon: Gem,
     title: "Premium Fabrics",
-    description: "We handpick only the finest materials — from luxurious Aso Oke to imported Italian lace and Swiss voile.",
-    emoji: "🛡️",
+    description:
+      "Luxurious lace, Aso Oke, Swiss voile and carefully sourced textiles, chosen for beauty and comfort.",
   },
   {
-    icon: Clock,
-    title: "On-Time Delivery",
-    description: "Your outfit is ready when promised. We respect your schedule, especially for weddings and special events.",
-    emoji: "⏰",
+    icon: Scissors,
+    title: "Expert Craftsmanship",
+    description:
+      "Clean cutting, considered construction and hand-finished details that hold their shape long after the event.",
   },
   {
-    icon: ThumbsUp,
-    title: "Perfect Fit Guarantee",
-    description: "Not satisfied? We'll adjust it until it fits like a glove — your comfort is our top priority.",
-    emoji: "👌",
+    icon: Ruler,
+    title: "Perfect Fit",
+    description:
+      "Made to your measurements, with fitting adjustments so the finish feels balanced, comfortable and yours.",
   },
   {
     icon: Truck,
-    title: "Nationwide Shipping",
-    description: "No matter where you are in the country, we deliver your custom outfit straight to your doorstep.",
-    emoji: "🚚",
+    title: "Nationwide Delivery",
+    description:
+      "Wherever you are in Nigeria, your finished outfit can be packaged and delivered to your door.",
   },
   {
-    icon: HeadphonesIcon,
-    title: "Dedicated Support",
-    description: "From first measurement to final fitting, our team is available via WhatsApp to guide you every step.",
-    emoji: "🎧",
+    icon: Headphones,
+    title: "Dedicated Customer Support",
+    description:
+      "From your first WhatsApp message to final delivery, we keep the conversation clear and personal.",
   },
-];
+] as const;
+
+const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 export default function WhyChooseUs() {
-  return (
-    <section aria-labelledby="why-heading" className="py-28 relative overflow-hidden">
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-gold/5 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
+  const reduceMotion = useReducedMotion();
 
-      <div className="container mx-auto px-6 relative z-10">
+  return (
+    <section
+      id="why-choose"
+      aria-labelledby="why-heading"
+      className="relative overflow-hidden border-y border-border/60 bg-cream-dark py-20 sm:py-24 lg:py-32"
+    >
+      <div className="container mx-auto">
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={reduceMotion ? false : { opacity: 0, y: 22 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-16"
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.65, ease: EASE }}
         >
-          <span className="inline-block px-4 py-1.5 rounded-full bg-gold/10 text-gold-ink text-xs uppercase tracking-[0.25em] mb-4 font-body font-medium">
-            🏆 Why Us
-          </span>
-          <h2 id="why-heading" className="font-display text-4xl md:text-6xl font-bold text-foreground">
-            Why Choose <span className="italic text-gradient-gold">TailorCraft</span>
-          </h2>
-          <p className="text-muted-foreground mt-4 max-w-xl mx-auto text-lg">
-            We don't just sew clothes — we craft confidence. Here's what sets us apart from the rest.
-          </p>
+          <SectionHeading
+            id="why-heading"
+            align="center"
+            eyebrow="The Zahra difference"
+            title={
+              <>
+                Why choose{" "}
+                <em className="italic text-burgundy">Style by Zahra</em>
+              </>
+            }
+            description="A personal atelier experience built on beautiful fabric, precise fit and the quiet confidence of an outfit made only for you."
+          />
         </motion.div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {reasons.map((r, i) => (
-            <motion.div
-              key={r.title}
-              initial={{ opacity: 0, y: 30 }}
+        <ul className="mt-12 grid list-none grid-cols-1 gap-5 p-0 sm:mt-14 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+          {reasons.map((reason, index) => (
+            <motion.li
+              key={reason.title}
+              initial={reduceMotion ? false : { opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.08 }}
-              className="group relative bg-card rounded-2xl p-8 border border-border/50 hover:border-gold/30 hover:shadow-2xl transition-all duration-500"
+              viewport={{ once: true, margin: "-60px" }}
+              transition={{ duration: 0.6, ease: EASE, delay: index * 0.07 }}
+              className="h-full"
             >
-              <div
-                aria-hidden="true"
-                className="absolute top-6 right-6 text-3xl opacity-20 group-hover:opacity-40 transition-opacity"
-              >
-                {r.emoji}
-              </div>
-              <div
-                aria-hidden="true"
-                className="w-14 h-14 rounded-2xl bg-gold/10 flex items-center justify-center mb-5 group-hover:bg-gold/20 transition-colors"
-              >
-                <r.icon className="text-gold-ink" size={26} aria-hidden="true" />
-              </div>
-              <h3 className="font-display font-bold text-foreground text-lg mb-2">{r.title}</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">{r.description}</p>
-            </motion.div>
+              <article className="group flex h-full flex-col border border-border/80 bg-white p-6 transition-[border-color,box-shadow,transform] duration-500 hover:-translate-y-1 hover:border-gold/60 hover:shadow-soft focus-within:-translate-y-1 focus-within:border-gold/60 focus-within:shadow-soft sm:p-7">
+                <div className="flex items-start justify-between gap-4">
+                  <span
+                    aria-hidden="true"
+                    className="flex h-12 w-12 items-center justify-center border border-champagne/80 bg-burgundy-soft text-burgundy transition-colors duration-500 group-hover:bg-burgundy group-hover:text-cream"
+                  >
+                    <reason.icon className="h-5 w-5" />
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className="font-display text-[0.95rem] tracking-[0.18em] text-gold-ink"
+                  >
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                </div>
+
+                <h3 className="mt-6 font-display text-[1.3rem] leading-tight text-ink">
+                  {reason.title}
+                </h3>
+                <p className="mt-3 text-[0.92rem] leading-relaxed text-muted-foreground">
+                  {reason.description}
+                </p>
+              </article>
+            </motion.li>
           ))}
-        </div>
+        </ul>
       </div>
     </section>
   );
