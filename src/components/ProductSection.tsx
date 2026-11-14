@@ -47,10 +47,22 @@ const cardVariants: Variants = {
 
 /** Keep category matching resilient to casing and plural forms from the API. */
 function normalizeCategory(value?: string): "Men" | "Women" | null {
-  const category = value?.trim().toLowerCase();
+  const category = value?.trim().toLowerCase().replace(/[^a-z]/g, "");
   if (!category) return null;
-  if (category.startsWith("women") || category === "female") return "Women";
-  if (category.startsWith("men") || category === "male") return "Men";
+  if (
+    category.startsWith("women") ||
+    category.startsWith("female") ||
+    category.startsWith("lad")
+  ) {
+    return "Women";
+  }
+  if (
+    category.startsWith("men") ||
+    category.startsWith("male") ||
+    category.startsWith("gent")
+  ) {
+    return "Men";
+  }
   return null;
 }
 
@@ -108,9 +120,10 @@ export default function ProductSection() {
           (product) => normalizeCategory(product.category) === activeCategory,
         );
   const pageCount = Math.ceil(visibleProducts.length / PAGE_SIZE);
+  const activePage = Math.min(currentPage, Math.max(1, pageCount));
   const paginatedProducts = visibleProducts.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE,
+    (activePage - 1) * PAGE_SIZE,
+    activePage * PAGE_SIZE,
   );
 
   const enquiryLink = whatsappLink(
@@ -296,10 +309,10 @@ export default function ProductSection() {
           </div>
         ) : (
           <motion.ul
+            key={`${activeCategory}-${activePage}`}
             variants={gridVariants}
             initial={reduceMotion ? false : "hidden"}
-            whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
+            animate="visible"
             className="mt-8 grid list-none grid-cols-1 gap-6 p-0 sm:mt-10 sm:grid-cols-2 lg:grid-cols-3 lg:gap-7"
           >
             {paginatedProducts.map((product) => {
@@ -393,20 +406,20 @@ export default function ProductSection() {
           <nav aria-label="Collection pages" className="mt-10 flex items-center justify-center gap-4">
             <button
               type="button"
-              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(Math.max(1, activePage - 1))}
+              disabled={activePage === 1}
               className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-white px-4 font-body text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-ink transition-colors hover:border-burgundy/40 hover:text-burgundy disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ChevronLeft aria-hidden="true" className="h-4 w-4" />
               Previous
             </button>
             <span aria-live="polite" className="font-body text-xs text-muted-foreground">
-              Page {currentPage} of {pageCount}
+              Page {activePage} of {pageCount}
             </span>
             <button
               type="button"
-              onClick={() => setCurrentPage((page) => Math.min(pageCount, page + 1))}
-              disabled={currentPage === pageCount}
+              onClick={() => setCurrentPage(Math.min(pageCount, activePage + 1))}
+              disabled={activePage === pageCount}
               className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-white px-4 font-body text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-ink transition-colors hover:border-burgundy/40 hover:text-burgundy disabled:cursor-not-allowed disabled:opacity-40"
             >
               Next
